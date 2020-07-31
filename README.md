@@ -1,12 +1,14 @@
 # Portfolio
 Welcome!
 
-My name is Caleb J. Picker.  I aim to develop my experience and expertise in data science.  Here, you will find my projects.  
+My name is Caleb J. Picker.  I aim to develop my experience and expertise in data science.  
+
+[Please go to my website to find my projects](https://calebjpicker.github.io/portfolio/).  
 
 
 **Projects**
 
-My first project is an [automated stock trading program](./stock/Automated\ Stock\ Trading.org). I am following Dr. Xu's ["Practical Quantitative Finance Using R"](https://www.drxudotnet.com/rquant.php).
+My first project is an [automated stock trading program]("./stock/Automated Stock Trading.html"). I am following Dr. Xu's ["Practical Quantitative Finance Using R"](https://www.drxudotnet.com/rquant.php).
 
 Check back here to view my progress.  I will post projects as I work on them.
 
