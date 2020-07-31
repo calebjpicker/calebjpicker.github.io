@@ -1,0 +1,3949 @@
+#+TITLE: Practical Quantitative Finance with R (Automated Stock Trading System)
+#+AUTHOR: Caleb J. Picker
+#+Date Created: March 29, 2020
+#+Date \today
+#+Resource: http://drxudotnet.com/pdfzip/ebook_rquant_20160719.pdf
+#+Author website: www.DrXuDotNet.com
+#+Author contact: jxu@DrXuDotNet.com
+#+header: :eval (if (executable-find "Rterm") "yes" "no")
+# Babel Settings
+#+PROPERTY: :session *R*
+#+PROPERTY: :cache yes
+#+PROPERTY: :exports results
+#+PROPERTY: :tangle yes :eval never
+
+* Disclaimer
+**  Using Code Examples
+You  may  use  the  code  in this book in your own applications and documentation. 
+You do not need to contact  the  author for  permission  unless  you  are  reproducing  a significant  portion  of  the  code.  
+For example, writing a program that uses several chunks of code from this book does notrequire permission. 
+Selling  or  distributing  the  example  code  listings  does  require  permission.  
+Incorporating  a  significant amount  of  example  code from  this  book  into  your  applications  and  documentation  also  requires permission.  
+Integrating  the  example  code from  this  book  into  commercial  products  is  not  allowed without written permission of the author.   
+
+* Set up
+** Set working directory and then set it
+#+begin_src R :session *R* :exports none
+dir <- "/media/calebpicker/Storage/OneDrive/Org/projects/Stock-Market/Trading"
+(setwd(dir))
+#+end_src
+
+#+RESULTS[dbc870f09faf280044cee5bfaf596935894760b2]: 
+#+begin_example
+           Date FTSE.Open FTSE.High FTSE.Low FTSE.Close   FTSE.Rtn N225.Open
+1193 2015-01-05   6547.80   6576.74  6404.49    6417.16 -1.9951740  17101.58
+1194 2015-01-06   6417.16   6452.66  6328.59    6366.51 -0.7892900  16808.26
+1195 2015-01-07   6366.51   6459.74  6366.51    6419.83  0.8375075  17067.40
+1196 2015-01-08   6419.83   6580.82  6419.83    6569.96  2.3385354  17318.74
+1197 2015-01-09   6569.96   6570.24  6471.38    6501.14 -1.0474950  16970.88
+1198 2015-01-13   6501.42   6558.83  6465.19    6542.20  0.6272476  16961.82
+1199 2015-01-14   6542.20   6542.20  6353.65    6388.46 -2.3499740  16872.95
+1200 2015-01-15   6388.46   6498.78  6298.15    6498.78  1.7268638  16812.96
+1201 2015-01-16   6498.78   6553.20  6443.28    6550.27  0.7923026  17000.78
+1202 2015-01-19   6550.27   6598.89  6548.00    6585.53  0.5382984  17071.65
+1203 2015-01-20   6585.53   6640.44  6585.53    6620.10  0.5249388  17308.72
+1204 2015-01-21   6620.10   6728.04  6620.10    6728.04  1.6304890  173 6.64
+1205 2015-01-22   6728.04   6808.18  6726.24    6796.63  1.0194648  17520.63
+1206 2015-01-23   6796.63   6841.73  6796.58    6832.83  0.5326169  17285.71
+1207 2015-01-26   6832.83   6855.92  6790.13    6852.40  0.2864113  17649.40
+1208 2015-01-27   6852.40   6864.97  6773.54    6811.61 -0.5952659  17615.93
+1209 2015-01-28   6811.61   6863.00  6777.08    6825.94  0.2103761  17666.91
+1210 2015-01-29   6825.94   6825.94  6750.22    6810.60 -0.2247310  17788.74
+1211 2015-01-30   6810.60   6843.98  6749.40    6749.40 -0.8985992  17536.61
+1212 2015-02-02   6749.40   6795.52  6731.99    6782.55  0.4911548  17654.60
+     N225.High N225.Low N225.Close    N225.Rtn Direction Predict
+1193  17111.36 16881.73   16883.19 -3.01872716      DOWN    DOWN
+1194  16974.61 16808.26   16885.33  0.01267903        UP    DOWN
+1195  17243.71 17016.09   17167.10  1.66872385        UP      UP
+1196  17342.65 17129.53   17197.73  0.17842769      DOWN      UP
+1197  17087.71 16828.27   17087.71 -0.63973285        UP    DOWN
+1198  17036.72 16770.56   16795.96 -1.70736737      DOWN    DOWN
+1199  17141.98 16856.22   17108.70  1.86198505        UP      UP
+1200  16864.34 16592.57   16864.16 -1.42932586        UP    DOWN
+1201  17039.80 16911.58   17014.29  0.89022463        UP      UP
+1202  17366.30 17066.77   17366.30  2.06891817        UP      UP
+1203  17329.03 17181.55   17280.48 -0.49417728        UP    DOWN
+1204  17355.74 17229.21   17329.02  0.28088954        UP      UP
+1205  17532.06 17460.76   17511.75  1.05447668        UP      UP
+1206  17471.94 17285.71   17468.52 -0.24686550        UP    DOWN
+1207  17768.41 17633.47   17768.30  1.71612282      DOWN      UP
+1208  17850.59 17615.93   17795.73  0.15437429        UP    DOWN
+1209  17778.83 17575.10   17606.22 -1.06491704      DOWN    DOWN
+1210  17808.47 17661.10   17674.39  0.38719225      DOWN    DOWN
+1211  17628.40 17459.45   17558.04 -0.65830593        UP    DOWN
+1212  17654.60 17271.87   17335.85 -1.26545711        UP    DOWN
+#+end_example
+
+** Load packages
+ #+begin_src R :session *R* :exports none
+   sourceDir <- function(path, trace = TRUE, ...) {
+     for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
+       if(trace) cat(nm,":")           
+       source(file.path(path, nm), ...)
+       if(trace) cat("\n")
+     }
+   }
+
+   sourceDir('/home/QuantLib-1.18/R')
+   library(renv)
+  #library(QuantLib)
+  #library(RQuantLib)
+   library(quantmod)
+   library(data.table)
+   library(plot3D)
+   library(plot3Drgl)
+   library(forecast)
+   library(tseries)
+   library(urca)
+   library(dplyr)
+   library(caret)
+  # library(devtools)
+   library(gamlss.add)
+ #+end_src
+
+ #+RESULTS:
+ | gamlss.add  |
+ | rpart       |
+ | nnet        |
+ | mgcv        |
+ | gamlss      |
+ | parallel    |
+ | nlme        |
+ | gamlss.data |
+ | splines     |
+ | gamlss.dist |
+ | MASS        |
+ | caret       |
+ | ggplot2     |
+ | lattice     |
+ | dplyr       |
+ | urca        |
+ | tseries     |
+ | forecast    |
+ | plot3Drgl   |
+ | rgl         |
+ | plot3D      |
+ | data.table  |
+ | quantmod    |
+ | TTR         |
+ | xts         |
+ | zoo         |
+ | renv        |
+ | stats       |
+ | graphics    |
+ | grDevices   |
+ | utils       |
+ | datasets    |
+ | methods     |
+ | base        |
+
+* Examples 
+** Using data table commands
+#+begin_src R :session *R* :exports both :results value
+DT<- data.table(iris)
+head(DT,3)
+DT[Sepal.Length >=5,mean(Sepal.Width),by=Species]
+DT[5:8]
+DT[Species=="setosa"]
+DT[,mean(Sepal.Length)]
+#.() command is an alias to list()
+DT[,.(mean(Sepal.Length),mean(Sepal.Width),mean(Petal.Length),mean(Petal.Width))]
+DT[,.(avg_Sepal.Length=mean(Sepal.Length),avg_Sepal.Width=mean(Sepal.Width))]
+DT[Species == "virginica", .(avg_Sepal.Length = mean(Sepal.Length),avg_Sepal.Width = mean(Sepal.Width))]
+DT[, .(avg_Sepal.Length = mean(Sepal.Length), avg_Sepal.Width = mean(Sepal.Width)), by = Species]
+DT[Petal.Length>=3, .(avg_Sepal.Length = mean(Sepal.Length), avg_Sepal.Width = mean(Sepal.Width)), by = .(Species, Petal.Width <= 1.5)]
+#+end_src
+
+#+RESULTS:
+| versicolor | TRUE  | 5.90888888888889 | 2.73111111111111 |
+| versicolor | FALSE |             6.18 |             3.12 |
+| virginica  | FALSE | 6.61702127659574 | 3.00212765957447 |
+| virginica  | TRUE  | 6.13333333333333 | 2.53333333333333 |
+
+** Data Joins
+#+begin_src R :session *R* :exports both :results value
+symbols<-data.table(id=c(1:4),ticker=c("AMAT","IBM","INTC","MSFT"))
+prices<-data.table(id=c(1,1,1,2,2,2,3,3,3,5,5,5),
+                   date = rep(c('2016-01-04','2016-01-05','2016-01-06'),4),
+                   price=c(18.47,18.49,17.73,135.95,135.85,135.17,33.99,33.83,33.08,54.80,55.05,54.05))
+setkey(symbols,id)
+setkey(prices,id)
+#+end_src
+
+#+RESULTS:
+| 1 | 2016-01-04 |  18.47 |
+| 1 | 2016-01-05 |  18.49 |
+| 1 | 2016-01-06 |  17.73 |
+| 2 | 2016-01-04 | 135.95 |
+| 2 | 2016-01-05 | 135.85 |
+| 2 | 2016-01-06 | 135.17 |
+| 3 | 2016-01-04 |  33.99 |
+| 3 | 2016-01-05 |  33.83 |
+| 3 | 2016-01-06 |  33.08 |
+| 5 | 2016-01-04 |   54.8 |
+| 5 | 2016-01-05 |  55.05 |
+| 5 | 2016-01-06 |  54.05 |
+
+** Inner join (would move back to average)
+** Bollinger Bands
+#+name: bollinger
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/bollinger.png
+gs<-getSymbols("GS",from="2019-06-01",auto.assign=FALSE)
+chartSeries(gs,theme="white",minor.ticks=FALSE,TA = "addEnvelope(20,5,'SMA')")
+chartSeries(gs,theme="white",minor.ticks=FALSE,TA = "addBBands(n=20,sd=2,maType='EMA')")
+#+end_src
+
+#+RESULTS: bollinger
+[[file:./img/bollinger.png]]
+
+#+RESULTS:
+[[file:innerjoin.png]]
+
+** MACD and RSI Indicators
+*** MACD Description
+Measures difference between short and long EMAs plotted alongside short 9-day EMA of the MACD
+Trading Strategy: Look at which side of zero tthe MACD lines are on.  Above 0 for a long time--trend is likely going up; below 0, trend likely going down
+Potential buy when MACD moves above 0; Potential sell when MACD moves below 0
+
+*** Relative Strength Index Description
+RSI is a momentum oscillator, calculating velocity and absolute stock price strength.
+Failure swing occurs when RSI enters above (or below) 70 (or 30) and then crosses back through that line.
+
+#+name: macd_rsi
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/macd_rsi.png
+chartSeries(gs,theme="white",minor.ticks=FALSE,TA = "addMACD(); addRSI(); addVo()")
+#+end_src
+
+#+RESULTS: macd_rsi
+[[file:./img/macd_rsi.png]]
+
+#+RESULTS:
+
+** On Balance Volume (OBV) Indicator
+*** Description 
+  OBV shows momentum of volume that can be used to predict stock price changes.
+  ="When volume increases sharply without a significant change in teh stock price, the price will eventually jump upward, and vice versa."=
+
+*** Theory 
+  Basically OBV change come before price changes because when public sees 'smart money' flowing in, they also buy shares to flow in.
+  If stock prices changes precede OBV changes, non-confirmations occurred, which can occur when stock rises without or before the OBV (bulle market top) or when the stock falls without or before the OBV (bear market bottoms.  
+  If OBV changes to increasing or decreasing trends, OBV breakouts occur, and OBV breakouts usually precede price breakouts.  
+  But long on upside OBV breakouts and sell short on downside OBV breakouts.
+
+ #+name: obv
+ #+begin_src R :session *R* :exports both :results output graphics file :file ./img/obv.png
+ chartSeries(gs,theme="white",minor.ticks=FALSE,TA = "addOBV(); addVo()")
+ #+end_src
+
+ #+RESULTS: obv
+ [[file:./img/obv.png]]
+
+** Accumulation/Distribution Indicator (A/D)
+*** Description
+    Volume changes weight price changes. This is a variant of OBV. If A/D increases, then many people are accumulating stock; decreaes mean distibuting stock.
+    Different values for A/D and price indicate upcoming price changes.  
+    Usually, price changes move in same direction and A/D changes. That is, price follows direction of A/D.
+
+ #+name AD
+ #+begin_src R :session *R* :exports both :results output graphics file :file ./img/ad.png
+ chartSeries(gs,theme="white",minor.ticks=FALSE,TA = "addChAD(); addVo()")
+ #+end_src
+
+ #+RESULTS:
+ [[file:./img/ad.png]]
+ 
+** Williams %R Inidicator
+*** Description
+    Momentum indicator used to measure overbought or oversold.  
+    Sell when %R reaches -10% or highest and buy when it reaches -90% or lower.
+    Works best in trending markets (bear or bull).
+
+ #+name: WpercR
+ #+begin_src R :session *R* :exports both :results output graphics file :file ./img/WpercR.png
+ chartSeries(gs,theme="white",minor.ticks=FALSE,TA = "addWPR(n=10); addVo()")
+ #+end_src
+
+ #+RESULTS: WpercR
+ [[file:./img/WpercR.png]]
+
+** Stochastic Indicator
+*** Description 
+    Smooths a simple stochastic indicator as a moving everage of a simple stochastic indicator. 
+    The indicator tries to preict price turning points by comparing the stock close price to its price range.  
+*** Theory 
+    In upwward-trending markets, prices close near their high and in downward-trending markets prices close near their low.  
+    Thus, transaction signals occur when %K (simple stochastic) cross through %D (moving average).
+*** Three popular trading rules
+ 1. Buy when indicator falls below specific level and then rises above (e.g., 20%).  
+    Sell indicator rises above specific level then falls below (80%).
+ 2. Buy when %K line rises above the %D line.  
+    Sell when %K line fallse below the %D line.
+ 3. Divergences occur when priceses are making a series of new high and the indicator is failing to surpass its previous highs and vice versa.
+
+ #+name: stoch
+ #+begin_src R :session *R* :exports both :results output graphics file :file ./img/stoch.png
+ chartSeries(gs,name="GS",theme="white",minor.ticks=FALSE,TA = "addVo()")
+ addTA(SMI(HLC(gs)),col=c("blue","red"),lwd=c(2,2))
+ #+end_src
+
+ #+RESULTS: stoch
+ [[file:./img/stoch.png]]
+
+** Commodity Channel Index Indicator (CCI)
+*** Description: 
+    Mean deviation of daily average price from moving average.  
+    A value > 100 indicates overbought and < -100 indicates oversold.
+    Used by traders to identify cyclical trends.  
+*** Theory
+    Stock prices move in cycles. 
+    Buy when > 100 and closed if move back below 100.  
+    Sell when < -100 and then close this position when CCI moves back above -100.
+
+ #+name cci
+ #+begin_src R :session *R* :exports both :results output graphics file :file ./img/cci.png
+ chartSeries(gs,name="GS",theme="white",minor.ticks=FALSE,TA = "addVo()")
+ chartSeries(gs,name="GS",theme="white",minor.ticks=FALSE,TA = "addCCI(15); addVo()")
+ #+end_src
+
+ #+RESULTS:
+ [[file:./img/cci.png]]
+
+** Add Custom Indicators
+   Dr. Xu provides code for a moving linear regression close price, added to the plotHelper.R script.
+
+#+name: plotHelper
+#+begin_src R :session *R* :exports none :results none
+source("./R/plotHelper.R")
+#+end_src
+
+#+name: add_sLR
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/add_sLR.png
+rr<-selfLinearRegression(gs,20)
+slr<-rr[,1] + rr[,2] * as.numeric(index(gs))
+slrDiff<-gs[,4] - slr
+
+chartSeries(gs,name="GS",theme="white",TA=NULL)
+addTA(slr,on=1,col="blue",lwd=2)
+addTA(slrDiff,col="red",lwd=2)
+#+end_src
+
+#+RESULTS: add_sLR
+[[file:./img/add_sLR.png]]
+
+After adding them to plothelper file, i will now convert these to generic TA functions
+
+#+name: sLR
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/sLR.png
+addSLR<-newTA(FUN=SLR,col="blue",lwd=2,on=1)
+addSLRDiff<-newTA(FUN=SLRDiff,col="red",lwd=2)
+chartSeries(gs,name="GS",theme="white",minor.ticks=FALSE,TA="addSLR(5);addSLRDiff(5)")
+
+amrn <- getSymbols("AMRN",from="2019-01-01",auto.assign=FALSE)
+chartSeries(amrn,name="AMRN",theme="white",minor.ticks=FALSE,TA="addSLR(5);addSLRDiff(5)")
+#+end_src
+
+#+RESULTS: sLR
+[[file:./img/sLR.png]]
+
+#+RESULTS:
+
+* Chapter 5: Options Pricing
+** Pricing European Options
+
+#+name: pricingHelper
+#+begin_src R :session *R* :exports none :results none
+source("./R/pricingHelper.R")
+#+end_src
+
+*** Black-Scholes Model
+ Run black scholes model function using default parameter values
+
+#+name: blackScholescp
+#+begin_src R :session *R* :exports both :results output
+call = blackScholes(optionType="c")
+call
+put<-blackScholes(optionType="p")
+put
+#+end_src
+
+#+RESULTS: blackScholescp
+: [1] 12.95233
+: [1] 9.259623
+
+#+RESULTS:
+: [1] 12.95233
+: [1] 9.259623
+
+#+name: blackScholescp_vector
+#+begin_src R :session *R*
+# can also use vector
+maturities<-seq(.1,1,.1)
+call<-blackScholes(optionType="c",maturity=maturities)
+put<-blackScholes(optionType="p",maturity=maturities)
+df<-data.frame(Maturity=maturities,Call=call,Put=put);df
+#+end_src
+
+#+RESULTS: blackScholescp_vector
+| 0.1 | 3.95488947167527 | 3.55807644119855 |
+| 0.2 | 5.66650831165669 | 4.87920435613916 |
+| 0.3 | 6.99553890101222 | 5.82398902003295 |
+| 0.4 | 8.12101292380903 | 6.57138586325043 |
+| 0.5 | 9.11291153299545 | 7.19130062821603 |
+| 0.6 | 10.0074528540244 |   7.719876864137 |
+| 0.7 | 10.8263525364556 | 8.17875646980198 |
+| 0.8 | 11.5838948469606 | 8.58215077787366 |
+| 0.9 | 12.2900992029433 | 8.94000707988624 |
+|   1 | 12.9523343432072 | 9.25962278837832 |
+
+*** Black-Scholes Greeks
+
+**** Delta
+Measures rate of change of option price relative to underlying asset's price (partial derivative).
+Also provides the probability an option will expire in-the-money (ITM).
+One way to measure potential returns on a trade is to compare delta to option prices across different strike prices.
+
+#+name: delta
+#+begin_src R :session *R*
+maturities<-seq(.1,1,.1)
+callDelta<-blackScholesDelta(optionType="c",maturity=maturities)
+putDelta<-blackScholesDelta(optionType = "p",maturity=maturities)
+delta<-data.frame(Maturity = maturities,CallDelta=callDelta,PutDelta=putDelta)
+delta
+#+end_src
+
+#+RESULTS: delta
+| 0.1 | 0.532492118525854 | -0.461525845528081 |
+| 0.2 | 0.543849768440315 | -0.444221944421615 |
+| 0.3 | 0.551643987663732 | -0.430517044694568 |
+| 0.4 | 0.557564567922134 | -0.418721141835776 |
+| 0.5 | 0.562271624021219 | -0.408173909527289 |
+| 0.6 | 0.566106511100102 | -0.398533782383021 |
+| 0.7 | 0.569273682008815 |  -0.38959609856367 |
+| 0.8 | 0.571907447371428 | -0.381226339706077 |
+| 0.9 | 0.574101869496281 | -0.373330237005517 |
+|   1 | 0.575925999969955 | -0.365838533614294 |
+
+**** Gamma: 
+Rate of change of Delta to small changes in the underlying asset's price
+
+#+name: gamma
+#+begin_src R :session *R*
+maturities<-seq(.1,1,.1)
+gamma<-blackScholesGamma(maturity=maturities) # uses default input paramters
+gamma<-data.frame(Maturity=maturities,Gamma=gamma)
+gamma
+#+end_src
+
+#+RESULTS: gamma
+| 0.1 | 0.0416332039895931 |
+| 0.2 | 0.0291457919112167 |
+| 0.3 | 0.0235603237361372 |
+| 0.4 | 0.0202005367229417 |
+| 0.5 | 0.0178878821717412 |
+| 0.6 | 0.0161666235565234 |
+| 0.7 |  0.014818251254182 |
+| 0.8 | 0.0137230929238774 |
+| 0.9 | 0.0128093403792992 |
+|   1 | 0.0120309256868483 |
+
+**** Theta
+Rate of change of option price relative to small change in time (time decays)
+
+#+name: theta
+#+begin_src R :session *R*
+maturities<-seq(.1,1,.1)
+ctheta<-blackScholesTheta(optionType="c",maturity=maturities)
+ptheta<-blackScholesTheta(optionType="p",maturity=maturities)
+theta<-data.frame(Maturity=maturities,CallTheta=ctheta,PutTheta=ptheta)
+theta
+#+end_src
+
+#+RESULTS: theta
+| 0.1 | -20.4694213222528 | -16.5330307690847 |
+| 0.2 | -14.7243546026431 | -10.8507981467472 |
+| 0.3 | -12.1091677418154 | -8.29767860048015 |
+| 0.4 | -10.5083985046314 | -6.75821837165564 |
+| 0.5 | -9.38734232006887 | -5.69772127635278 |
+| 0.6 | -8.53866135943349 | -4.90885778448974 |
+| 0.7 | -7.86267253877158 |   -4.291953023147 |
+| 0.8 | -7.30463212053447 | -3.79227137913314 |
+| 0.9 | -6.83160072837542 | -3.37688151467393 |
+|   1 | -6.42238712464084 | -3.02460014578674 |
+
+**** Rho 
+Rate of change of option price rlative to unit change in risk-free interest rate
+***** Description
+Rho is a risk measure that simply tells us by how much call and put prices change as a result of changing interest rates.
+Rho for ITM option will be largest because of arbitrary activity. (?)
+
+#+name: rho
+#+begin_src R :session *R*
+maturities<-seq(.1,1,.1)
+crho<-blackScholesRho(optionType="c",maturity=maturities)
+prho<-blackScholesRho(optionType="p",maturity=maturities)
+rho<-data.frame(Maturity=maturities,CallRho=crho,PutRho=prho)
+rho
+#+end_src
+
+#+RESULTS: rho
+| 0.1 | 4.92943223809101 | -4.97106609940067 |
+| 0.2 | 9.74369370647497 | -9.86027975966014 |
+| 0.3 | 14.4506579596083 | -14.6627080468469 |
+| 0.4 | 19.0541775473617 | -19.3774000187312 |
+| 0.5 | 23.5571254345632 | -24.0043457904725 |
+| 0.6 | 27.9619189535915 | -28.5439530614634 |
+| 0.7 | 32.2707109650981 | -32.9968564283183 |
+| 0.8 | 36.4854799121458 | -37.3638277987851 |
+| 0.9 | 40.6080789720164 | -41.6457277023942 |
+|   1 | 44.6402656537882 | -45.8434761498077 |
+
+**** Vega
+Rate of change of option price relative to chagne in volatitlity of underlying asset
+Measure of Risk
+
+#+name: vega
+#+begin_src R :session *R*
+maturities<-seq(.1,1,.1)
+vega<-blackScholesVega(maturity=maturities)
+vega<-data.frame(Maturity=maturities,Vega = vega)
+vega
+#+end_src
+
+#+RESULTS: vega
+| 0.1 | 12.4899611968779 |
+| 0.2 |   17.48747514673 |
+| 0.3 | 21.2042913625235 |
+| 0.4 | 24.2406440675301 |
+| 0.5 | 26.8318232576118 |
+| 0.6 | 29.0999224017421 |
+| 0.7 | 31.1183276337821 |
+| 0.8 | 32.9354230173057 |
+| 0.9 | 34.5852190241077 |
+|   1 |  36.092777060545 |
+
+**** Implied Volatility [FUNCTION NEEDS TO BE VECTORIZED]
+Uses bisection method to calculate implied volatility, which is used when Vega us unknown analytically (as is the case with American Options)
+I think this function is not vectorized??
+
+
+#+name: iv
+#+begin_src R :session *R*
+vol<-volTest() # He used default values for this test, but it seems like he created the skeleton to vectorize this
+vol
+#+end_src
+
+#+RESULTS: iv
+| 0.1 | 0.15 | 0.25079345703125 |                0 |
+| 0.2 |  0.2 | 0.19720458984375 |                0 |
+| 0.3 | 0.25 | 0.17559814453125 |                0 |
+| 0.4 |  0.3 | 0.16387939453125 | 0.05731201171875 |
+| 0.5 | 0.35 | 0.15655517578125 | 0.08807373046875 |
+| 0.6 |  0.4 | 0.15167236328125 | 0.10980224609375 |
+| 0.7 | 0.45 | 0.14825439453125 | 0.12786865234375 |
+| 0.8 |  0.5 | 0.14581298828125 | 0.14361572265625 |
+| 0.9 | 0.55 | 0.14422607421875 | 0.15802001953125 |
+|   1 |  0.6 | 0.14300537109375 | 0.17132568359375 |
+
+***** 3D Plot of implied volatility [NEEDS TO BE VECTORIZED]
+
+#+name: iv3d_call
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/iv3d_call.png
+# define arbitrary vectors
+x<-seq(.1,1,length=30)
+y<-seq(9.5,10.5,length=30)
+# create 3D graph for call option
+cvol <-volTest3d(optionType = "c", x, y)
+persp3Drgl(x = x, y = y, z = cvol, border="black", bty = "b2", ticktype="detailed", 
+           xlab = "Maturity", ylab = "Strike", zlab = "cVol")
+plotdev() # this function appears necessary!!
+#+end_src
+
+#+RESULTS: iv3d_call
+[[file:./img/iv3d_call.png]]
+
+#+name: iv3d_put
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/iv3d_put.png
+# create 3D graph for put option
+pvol<-volTest3d(optionType="p",x,y)
+persp3Drgl(x=x,y=y,z=pvol,border="black",bty="b2",ticktype="detailed",
+           xlab="Maturity",ylab="Strike",zlab="pVol")
+plotdev()
+#+end_src
+
+#+RESULTS: iv3d_put
+[[file:./img/iv3d_put.png]]
+
+** Pricing American Options
+*** Note
+    No analytical solutions, only closed-form approximations.  
+    This book uses Barone-Adesi and Whaley (BAW) method.
+
+BAW approximation. [may need to be vectorized]
+This serves as a direct comparison of this calculation and with results from the literature
+BAW value is from the literature (which study?); calculation is our function
+
+#+name: americanOptionTest
+#+begin_src R :session *R*
+df<-americanOptionTest()
+df
+#+end_src
+
+#+RESULTS: americanOptionTest
+| Call | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.15 |  0.0206 | 0.0206352490115781 |
+| Call | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.15 |  1.8771 |   1.87693090316397 |
+| Call | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.15 | 10.0089 |   10.0060782391418 |
+| Call | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.25 |  0.3159 |  0.315900560469413 |
+| Call | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.25 |   3.128 |   3.12769716682636 |
+| Call | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.25 | 10.3919 |   10.3901310227994 |
+| Call | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.35 |  0.9495 |  0.949466871381845 |
+| Call | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.35 |  4.3777 |   4.37768504887939 |
+| Call | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.35 | 11.1679 |   11.1678541183701 |
+| Call | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.15 |  0.8208 |  0.820818161315527 |
+| Call | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.15 |  4.0842 |   4.08413110183786 |
+| Call | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.15 | 10.8087 |   10.8085265638292 |
+| Call | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.25 |  2.7437 |   2.74360699741125 |
+| Call | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.25 |  6.8015 |    6.8013553480927 |
+| Call | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.25 |  13.017 |   13.0167414130065 |
+| Call | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.35 |  5.0063 |   5.00616776309696 |
+| Call | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.35 |  9.5106 |   9.51031688144187 |
+| Call | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.35 | 15.5689 |   15.5684362649648 |
+| Put  | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.15 |      10 |                 10 |
+| Put  | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.15 |   1.877 |   1.87693171800013 |
+| Put  | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.15 |   0.041 | 0.0409968523308315 |
+| Put  | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.25 | 10.2533 |   10.2530080223069 |
+| Put  | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.25 |  3.1277 |   3.12769785317854 |
+| Put  | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.25 |  0.4562 |  0.456183857373879 |
+| Put  | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.35 | 10.8787 |   10.8785049429921 |
+| Put  | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.35 |  4.3777 |   4.37768536326512 |
+| Put  | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.35 |  1.2402 |   1.24020577543922 |
+| Put  | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.15 | 10.5595 |    10.559208029998 |
+| Put  | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.15 |  4.0842 |   4.08412980613522 |
+| Put  | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.15 |  1.0822 |   1.08219870414518 |
+| Put  | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.25 | 12.4419 |   12.4416470451352 |
+| Put  | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.25 |  6.8014 |   6.80135334676027 |
+| Put  | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.25 |  3.3226 |   3.32258006972534 |
+| Put  | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.35 | 14.6945 |   14.6943266002338 |
+| Put  | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.35 |  9.5104 |   9.51031427881554 |
+| Put  | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.35 |  5.8823 |   5.88219585021206 |
+
+*** Pricing Barrier Options
+Here,  we  will  discuss  how  to  price the  standard  barrier  options  using  the  formulas  provided  
+in  the literature (D. R. Rich, Advances in Futures and Options Research, 7, 267, 1994, and E. G. Haug's
+book The complete Guide to Option Pricing Formulas).
+
+#+name: barrierOptions
+#+begin_src R :session *R*
+# [may need to be vectorized]
+barrierOptionTest("c")
+barrierOptionTest("p")
+barrierOptionTest("c",barrierLevel=110)
+barrierOptionTest("p",barrierLevel=110)
+#+end_src
+
+#+RESULTS: barrierOptions
+| 0.1 | nil | nil | 0.0756179326170572 | 3.48245850858149 |
+| 0.2 | nil | nil |  0.439602240166486 | 4.43960211597268 |
+| 0.3 | nil | nil |  0.912782668488793 | 4.91120635154416 |
+| 0.4 | nil | nil |   1.39847904654791 | 5.17290681670251 |
+| 0.5 | nil | nil |   1.86676852712487 | 5.32453210109117 |
+| 0.6 | nil | nil |   2.30858478552888 | 5.41129207860811 |
+| 0.7 | nil | nil |   2.72198628911349 | 5.45677018068849 |
+| 0.8 | nil | nil |   3.10762902291262 | 5.47452175496106 |
+| 0.9 | nil | nil |   3.46709922212143 | 5.47290785776481 |
+|   1 | nil | nil |   3.80225336853264 | 5.45736941984568 |
+
+*** Pricing European Options Using RQuantLib
+
+The main reason to use QuantLib in this book is that QuantLib provides not only the option-pricing tool,  
+but  also  comprehensive  frameworks for  pricing  fixed-income  instruments,  quantitative analysis, 
+modeling, trading, and risk managementof financial assets.
+The books suggests creating a SWIG (simplified Wrapper and Interface Generator) R version of QuantLib,
+because the actual QuantLib has many many more features.
+
+RQuantLib is not compatibile with R v3.6.0, however, I think this code is important so I will copy it in
+**** Scalar inputs
+
+#+name: eo_scalar
+#+begin_src R :session *R* :exports both :results output
+library(RQuantLib)
+eo <-EuropeanOption(type="call", underlying = 100, strike = 100, dividendYield =0.06, riskFreeRate = 0.1, maturity = 0.5, volatility = 0.3)
+eo
+#+end_src
+
+#+RESULTS: eo_scalar
+: Sufficient QuantLib version with insufficient configuration.
+: Try configuring your build with the --enable-intraday argument.
+: Concise summary of valuation for EuropeanOption 
+:    value    delta    gamma     vega    theta      rho   divRho 
+:   9.1129   0.5623   0.0179  26.8318  -9.3873  23.5571 -28.1136
+
+
+**** Vector Inputs
+#+name: eo_vector
+#+begin_src R :session *R* :exports both :results output
+spot = seq(10,200,length=30)
+mat = seq(0.1,3,length=30)
+call <-EuropeanOptionArrays(type = "call",strike = 100, dividendYield = 0.06, 
+                            riskFreeRate = 0.1, volatility = 0.3, underlying = spot, maturity = mat)
+put <-EuropeanOptionArrays(type = "put",strike = 100, dividendYield = 0.06,
+                           riskFreeRate = 0.1, volatility = 0.3, underlying = spot, maturity = mat)
+call$parameters.type
+call$parameters.strike
+call$parameters.underlying
+#+end_src
+
+#+RESULTS: eo_vector
+: [1] "call"
+: [1] 100
+:  [1]  10.00000  16.55172  23.10345  29.65517  36.20690  42.75862  49.31034
+:  [8]  55.86207  62.41379  68.96552  75.51724  82.06897  88.62069  95.17241
+: [15] 101.72414 108.27586 114.82759 121.37931 127.93103 134.48276 141.03448
+: [22] 147.58621 154.13793 160.68966 167.24138 173.79310 180.34483 186.89655
+: [29] 193.44828 200.00000
+
+**** Option Prices
+
+#+name: optcall
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/optcall.png
+head(call$value,2)
+persp3Drgl(x= spot, y = mat, z = call$value, border="black", bty = "b2", 
+           ticktype =  "detailed", xlab = "spot", ylab ="maturity", zlab = "cPrice")
+plotdev()
+#+end_src
+
+#+RESULTS: optcall
+[[file:./img/optcall.png]]
+
+#+name: optput
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/optput.png
+persp3Drgl(x= spot, y = mat, z = put$value, border="black", bty = "b2", 
+           ticktype =  "detailed", xlab = "spot", ylab = "maturity", zlab = "pPrice")
+plotdev()
+#+end_src
+
+#+RESULTS: optput
+[[file:./img/optput.png]]
+
+**** Delta
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/deltacall_Rquant.png
+persp3Drgl(x= spot, y = mat, z = call$delta, border="black", bty = "b2", 
+           ticktype =  "detailed", xlab = "spot", ylab = "maturity", zlab = "cDelta")
+plotdev()
+#+end_src
+
+#+RESULTS:
+[[file:./img/deltacall_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/deltaput_Rquant.png
+persp3Drgl(x=spot, y = mat, z = put$delta, border="black", bty = "b2", 
+           ticktype =  "detailed", xlab = "spot", ylab = "maturity", zlab = "pDelta")
+plotdev()
+#+end_src
+
+#+RESULTS:
+[[file:./img/deltaput_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/delta2d_Rquant.png
+image2D(z=call$delta,x=spot,y=mat, contour = T, alpha=0.7, resfac = 5, xlab ="spot", ylab = "maturity")
+#+end_src
+
+#+RESULTS:
+[[file:./img/delta2d_Rquant.png]]
+
+# Gamma
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/gamma_Rquant.png
+persp3Drgl(x= spot, y = mat, z = call$gamma, border="black", bty = "b2",
+           ticktype= "detailed", xlab = "spot", ylab = "maturity", zlab = "Gamma")
+plotdev()
+#+end_src
+
+#+RESULTS:
+[[file:./img/gamma_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/gamma2d_Rquant.png
+image2D(z=call$gamma,x=spot,y=mat, contour = list(nlevels = 20), 
+        alpha=0.7,resfac = 5, xlab ="spot", ylab = "maturity")
+#+end_src
+
+#+RESULTS:
+[[file:./img/gamma2d_Rquant.png]]
+
+**** Theta
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/thetacall_Rquant.png
+persp3Drgl(x= spot, y = mat, z = call$theta, border="black", bty = "b2", 
+           ticktype= "detailed", xlab = "spot", ylab = "maturity", zlab = "cTheta")
+plotdev()
+#+end_src
+
+#+RESULTS:
+[[file:./img/thetacall_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/thetaput_Rquant.png
+persp3Drgl(x= spot, y = mat, z = put$theta, border="black", bty = "b2",
+           ticktype = "detailed", xlab = "spot", ylab = "maturity", zlab = "pTheta")
+plotdev()
+#+end_src
+
+#+RESULTS:
+[[file:./img/thetaput_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/thetacall2d_Rquant.png
+image2D(z=call$theta,x = spot,y = mat, contour = list(nlevels = 20), 
+        alpha=0.7, resfac = 5, xlab = "spot", ylab = "maturity")
+#+end_src
+
+#+RESULTS:
+[[file:./img/thetacall2d_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/thetaput2d_Rquant.png
+image2D(z = put$theta,x = spot,y = mat, contour = list(nlevels = 20),
+        alpha=0.7,resfac = 5, xlab = "spot", ylab = "maturity")
+#+end_src
+
+#+RESULTS:
+[[file:./img/thetaput2d_Rquant.png]]
+
+**** Vega
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/vega_Rquant.png
+persp3Drgl(x= spot, y = mat, z = put$vega, border="black", bty = "b2", 
+           ticktype= "detailed", xlab = "spot", ylab = "maturity", zlab = "Vega")
+plotdev()
+#+end_src
+
+#+RESULTS:
+[[file:./img/vega_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/vega2d_Rquant.png
+image2D(z = put$vega,x = spot,y =mat, contour = list(nlevels = 10),
+        alpha=0.7, resfac = 5, xlab = "spot", ylab = "maturity")
+#+end_src
+
+#+RESULTS:
+[[file:./img/vega2d_Rquant.png]]
+
+# Rho
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/rhocall_Rquant.png
+persp3Drgl(x= spot, y = mat, z = call$rho, border="black", bty = "b2",
+           ticktype = "detailed", xlab = "spot", ylab = "maturity", zlab = "cRho")
+plotdev()
+#+end_src
+
+#+RESULTS:
+[[file:./img/rhocall_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/rhoput_Rquant.png
+persp3Drgl(x= spot, y = mat, z = put$rho, border="black", bty = "b2", 
+           ticktype= "detailed", xlab = "spot", ylab = "maturity", zlab = "pRho")
+plotdev()
+#+end_src
+
+#+RESULTS:
+[[file:./img/rhoput_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/rhocall2d_Rquant.png
+image2D(z = call$rho,x = spot,y = mat, contour = list(nlevels = 10), 
+        alpha=0.7, resfac = 5, xlab = "spot", ylab = "maturity")
+#+end_src
+
+#+RESULTS:
+[[file:./img/rhocall2d_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/rhoput2d_Rquant.png
+image2D(z = put$rho,x = spot,y = mat, contour = list(nlevels = 10), alpha=0.7,
+        resfac = 5, xlab = "spot", ylab = "maturity")
+#+end_src
+
+#+RESULTS:
+[[file:./img/rhoput2d_Rquant.png]]
+
+# Dividend Rho
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/divrhocall_Rquant.png
+persp3Drgl(x = spot, y = mat, z = call$divRho, border="black", bty = "b2", 
+           ticktype = "detailed", xlab = "spot", ylab = "maturity", zlab = "cDivRho")
+plotdev()
+#+end_src
+
+#+RESULTS:
+[[file:./img/divrhocall_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/divrhoput_Rquant.png
+persp3Drgl(x = spot, y = mat, z = put$divRho, border="black", bty = "b2",
+           ticktype = "detailed", xlab = "spot", ylab = "maturity", zlab = "pDivRho")
+plotdev()
+#+end_src
+
+#+RESULTS:
+[[file:./img/divrhoput_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/divrhocall2d_Rquant.png
+image2D(z = call$divRho,x = spot,y = mat, contour = list(nlevels = 10), 
+        alpha=0.7, resfac = 5, xlab = "spot", ylab = "maturity")
+#+end_src
+
+#+RESULTS:
+[[file:./img/divrhocall2d_Rquant.png]]
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/divrhoput2d_Rquant.png
+image2D(z = put$divRho,x = spot,y = mat, contour = list(nlevels = 10),
+        alpha=0.7, resfac = 5, xlab = "spot", ylab = "maturity")
+#+end_src
+
+#+RESULTS:
+[[file:./img/divrhoput2d_Rquant.png]]
+
+**** Implied Volatility
+#+begin_src R :session *R*
+volTestRQuantLib()
+#+end_src
+
+#+RESULTS:
+| 0.1 | 0.15 | 0.250853194410345 |                nil |
+| 0.2 |  0.2 | 0.197180839995252 |                nil |
+| 0.3 | 0.25 | 0.175617218059562 |                nil |
+| 0.4 |  0.3 | 0.163857027808452 | 0.0572945918817417 |
+| 0.5 | 0.35 | 0.156525842458431 |  0.088125244698086 |
+| 0.6 |  0.4 | 0.151622852777112 |  0.109839013951404 |
+| 0.7 | 0.45 | 0.148222137962368 |  0.127809338352665 |
+| 0.8 |  0.5 | 0.145832014267859 |  0.143612897736768 |
+| 0.9 | 0.55 | 0.144166638875626 |  0.157976779647934 |
+|   1 |  0.6 | 0.143047583468275 |  0.171306296895325 |
+
+**** Pricing American Options Using RQuantLib
+#+begin_src R :session *R*
+americanOptionTestRQuantLib() # americanoption function is part of RQuantLib package
+#+end_src
+
+#+RESULTS:
+| call | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.15 |  0.0206 | 0.0206355955225497 | 0.0205147085636383 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.15 |  1.8771 |   1.87692068874091 |   1.87637234523083 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.15 | 10.0089 |   10.0060600865373 |   10.0103810436174 |
+| call | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.25 |  0.3159 |  0.315900169963693 |  0.315226824505447 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.25 |   3.128 |   3.12768315525238 |   3.12676882773764 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.25 | 10.3919 |   10.3901235263411 |   10.3964737947459 |
+| call | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.35 |  0.9495 |  0.949470327551167 |  0.948131904941945 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.35 |  4.3777 |   4.37766903775877 |   4.37638710372813 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.35 | 11.1679 |   11.1678500029801 |   11.1723557233284 |
+| call | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.15 |  0.8208 |  0.820821687808406 |  0.811254630555651 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.15 |  4.0842 |   4.08411688820499 |    4.0680694577577 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.15 | 10.8087 |   10.8085265479122 |   10.8099367137948 |
+| call | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.25 |  2.7437 |   2.74360046470245 |   2.72202908512446 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.25 |  6.8015 |   6.80134159880973 |   6.77456288042996 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.25 |  13.017 |   13.0167301264422 |   13.0003543158578 |
+| call | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.35 |  5.0063 |   5.00615862404478 |   4.97310987671634 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.35 |  9.5106 |   9.51030763665742 |    9.4727459728892 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.35 | 15.5689 |   15.5684276526067 |   15.5377325366463 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.15 |      10 |                 10 |   10.0003767979805 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.15 |   1.877 |   1.87692246569105 |   1.87636986566311 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.15 |   0.041 | 0.0409963144259407 | 0.0408154066759524 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.25 | 10.2533 |   10.2530077424327 |   10.2597781868763 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.25 |  3.1277 |   3.12768538105221 |   3.12676195864811 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.25 |  0.4562 |  0.456185387385909 |  0.455354588099725 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.35 | 10.8787 |   10.8785088157856 |   10.8835116811251 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.35 |  4.3777 |   4.37767140927736 |   4.37637377457868 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.35 |  1.2402 |   1.24020906588461 |   1.23866796732623 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.15 | 10.5595 |    10.559212890271 |   10.5635049253315 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.15 |  4.0842 |   4.08411682490274 |   4.06806423105833 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.15 |  1.0822 |   1.08220237657328 |   1.07075142843723 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.25 | 12.4419 |   12.4416420654375 |   12.4289523744303 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.25 |  6.8014 |   6.80134133690829 |   6.77454946173172 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.25 |  3.3226 |   3.32257190364126 |   3.29798979310925 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.35 | 14.6945 |   14.6943191790598 |   14.6680041426606 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.35 |  9.5104 |   9.51030684192695 |   9.47272287424194 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.35 |  5.8823 |   5.88218975679455 |   5.84511588741519 |
+
+**** Greeks
+#+begin_src R :session *R*
+americanOptionGreeks()
+#+end_src
+
+#+RESULTS:
+| call | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.15 |  0.0138588986205876 | 0.00827771982579951 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.15 |   0.505687503446581 |   0.083708771757255 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.15 |    0.98493009796161 |  0.0122926322672814 |
+| call | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.25 |  0.0970677060302085 |  0.0240879491717037 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.25 |   0.511940800057776 |  0.0502003124517584 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.25 |   0.891475695173739 |  0.0218179800401012 |
+| call | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.35 |   0.183324601647608 |  0.0265756302417999 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.35 |   0.518190421308581 |  0.0358306580329118 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.35 |   0.816696747456784 |  0.0217859135714776 |
+| call | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.15 |   0.166279606699003 |  0.0258431438577783 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.15 |   0.504429540035284 |  0.0371129401492735 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.15 |   0.821464035166264 |  0.0242281628216485 |
+| call | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.25 |   0.293927707456786 |  0.0213449155530648 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.25 |   0.517972798878319 |  0.0222146354391652 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.25 |   0.719135413028064 |  0.0174709045881427 |
+| call | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.35 |   0.367029438877382 |  0.0166380683121993 |
+| call | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.35 |   0.531478952552548 |  0.0158108553750183 |
+| call | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.35 |   0.676968292783154 |  0.0131051872557407 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.15 |  -0.996246933954736 |  0.0170407680197494 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.15 |  -0.486921148125306 |  0.0837088925076232 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.15 | -0.0208230200467422 | 0.00958959716334421 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.25 |  -0.901399175723856 |   0.025405091617169 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.25 |  -0.480668738529977 |  0.0502004348140603 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.25 |  -0.105573358595429 |  0.0209502344339422 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.1 | 0.35 |  -0.812204198235445 |  0.0272185974596913 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.1 | 0.35 |  -0.474420447517641 |  0.0358307821716465 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.1 | 0.35 |  -0.178134237647953 |  0.0213595600845379 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.15 |  -0.824183155840895 |  0.0308163962271656 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.15 |  -0.463743324116623 |  0.0371130463508133 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.15 |  -0.163634428456491 |  0.0209445678315246 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.25 |  -0.682092621921398 |  0.0230511705228104 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.25 |    -0.4502180009975 |  0.0222147476436408 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.25 |  -0.255028851337587 |  0.0163350277462863 |
+| put  | 100 |  90 | 0.1 | 0.1 | 0.5 | 0.35 |  -0.605162796048487 |  0.0174980707110558 |
+| put  | 100 | 100 | 0.1 | 0.1 | 0.5 | 0.35 |  -0.436738700842891 |  0.0158109769541897 |
+| put  | 100 | 110 | 0.1 | 0.1 | 0.5 | 0.35 |  -0.294285672859619 |  0.0125311738110276 |
+
+**** Implied Volatility
+#+begin_src R :session *R*
+americanOptionvolTest()
+#+end_src
+
+#+RESULTS:
+| 0.1 | 0.15 | 0.250805050001856 |                nil |
+| 0.2 |  0.2 | 0.197130635151094 |                nil |
+| 0.3 | 0.25 | 0.175562779784648 |                nil |
+| 0.4 |  0.3 | 0.163798036557704 |                nil |
+| 0.5 | 0.35 | 0.156462252126399 |                nil |
+| 0.6 |  0.4 | 0.151554604231608 |                nil |
+| 0.7 | 0.45 | 0.148149139460267 |                nil |
+| 0.8 |  0.5 | 0.145754123799344 | 0.0636293902825883 |
+| 0.9 | 0.55 | 0.144083718258347 |  0.116786768901597 |
+|   1 |  0.6 | 0.142959548538187 |  0.132846917797364 |
+| 1.1 | 0.65 | 0.142264939260604 |  0.146253039387939 |
+| 1.2 |  0.7 |  0.14192018475581 |  0.158258712701151 |
+| 1.3 | 0.75 | 0.141868527042548 |   0.16929831643617 |
+| 1.4 |  0.8 | 0.142069683236813 |  0.179622053218701 |
+| 1.5 | 0.85 |  0.14249286542503 |  0.189395374425924 |
+
+**** Pricing Barrier Options Using RQuantLib
+#+begin_src R :session *R*
+barrierOptionTestRQuantLib(optionType="c",barrierLevel=90)
+barrierOptionTestRQuantLib(optionType="p",barrierLevel=90)
+barrierOptionTestRQuantLib(optionType="c",barrierLevel=110)
+barrierOptionTestRQuantLib(optionType="p",barrierLevel=110)
+#+end_src
+
+#+RESULTS:
+| 0.1 | nil | nil | 0.0756172432109223 |  3.4824513759957 |
+| 0.2 | nil | nil |  0.439599073225826 | 4.43959950929753 |
+| 0.3 | nil | nil |  0.912785067057209 | 4.91120027318911 |
+| 0.4 | nil | nil |   1.39848564322748 | 5.17289830391156 |
+| 0.5 | nil | nil |   1.86677683287176 | 5.32452328412973 |
+| 0.6 | nil | nil |   2.30859306338841 | 5.41128437057496 |
+| 0.7 | nil | nil |   2.72199354756831 |  5.4567642949745 |
+| 0.8 | nil | nil |   3.10763476886509 | 5.47451795015862 |
+| 0.9 | nil | nil |   3.46710326298896 | 5.47290613035794 |
+|   1 | nil | nil |   3.80225568426028 | 5.45736962668288 |
+
+# HOW TO PRICE FOR REAL-WORLD OPTIONS -----------------------------------
+=If you want to value options in real-world market with discrete dividend payments using the interest rate curve and volatility surface, you will need to bootstrap the required dividend, interest rate, and volatility curves from real market data.=
+=Since the current version of RQuantLib does not exposes the interface to access necessary features,  you need to use the original QuantLib or its equivalent SWIG R version to evaluate real-world options.=
+=If you are interested in this topic, my previous published book "Practical C# and WPF for Financial Markets" provided an example on how to price a real-world American option using  the  C#  SWIG  version  of QuantLib.=
+=This  example will give  you  an  idea  for  what  is  required to price options in the real-world market.=
+=By following the steps and templates described in that example, you should be able to price various options in real-world markets.=
+
+* Chapter 6: Pricing Fixed-Income Instruments
+
+** Simple Bonds Pricing
+
+** Pricing Bonds Using RQuantLib (p. 185, pdf 205)
+
+#+name: fixedIncomeHelper
+#+begin_src R :session *R* :exports both :results value
+source("./R/fixedIncomeHelper.R")
+#+end_src
+
+#+RESULTS: fixedIncomeHelper
+
+#+name: bondFlatRate
+#+begin_src R :session *R* :exports both :results output
+# parameters: evalDate, issuedate, maturity, settlementDays, faceValue, rate, coupon, frequency)
+library(RQuantLib)
+library(dplyr)
+bondFlatRate("2015-12-16", "2015-12-16", "2025-12-16", 1,1000, 0.06,0.05,"Annual")
+#+end_src
+
+#+RESULTS: bondFlatRate
+: Error in Date(as.numeric(format(rDate, "%d")), format(rDate, "%B"), as.numeric(format(rDate,  : 
+:   could not find function "Date"
+** Pricing Bonds Using QuantLib-SWIG R
+#+begin_src R :session *R* :exports both :results output  
+bondFlatRate("2015-12-16", "2015-12-16", "2025-12-16", 1, 1000,0.05,0.05,"Annual")
+#+end_src
+
+#+RESULTS:
+: Error in Date(as.numeric(format(rDate, "%d")), format(rDate, "%B"), as.numeric(format(rDate,  : 
+:   could not find function "Date"
+*** Pricing Bonds with a Rate Curve
+
+#+call fixedIncomeHelpery
+#+begin_src R :session *R* :exports both :results output
+bondCurveRate()
+#+end_src
+
+#+RESULTS:
+: Error in Date(15, "January", 2015) : could not find function "Date"
+
+*** Zero-Coupon Direct Yield Curve  
+#+begin_src R :session *R* 
+zeroCouponDirect()
+#+end_src
+
+#+RESULTS:
+: org_babel_R_eoe
+
+*** Zero-Coupon Bootstrapping
+
+#+begin_src R :session *R*
+zeroCouponBootstrap("DataPoints")
+#+end_src
+
+#+RESULTS:
+
+[skipping rest of bond trading.  problem is functions aren't working.  strange org_babel_R_eoe error with Date___add__?]
+
+* Chapter 7: Linear Analysis
+** What are alpha and beta?
+*** Alpha
+=Alpha is a measure of an investment's performance compared to a benchmark, such as the S&P 500 index.=
+=It is an estimate of the return usually based usually on the growth of earnings per share.=
+*** Beta
+=Beta is based on the volatility, namely the movement of the fund or stock relative to its benchmark.=
+** Linear Regression in R
+
+#+name:load_data_lr
+#+begin_src R :session *R* :exports both :results output
+idxdata <- read.csv("./inst/extdata/indices.csv", head = T, sep = ",")
+idxdata$Date <- as.Date(idxdata$Date, "%m/%d/%Y")
+head(idxdata)
+#+end_src
+
+#+RESULTS: load_data_lr
+:         Date IGSpread HYSpread     SPX   VIX
+: 1 2004-09-21    53.93    363.0 1129.30 13.66
+: 2 2004-09-22    55.18    367.5 1113.56 14.74
+: 3 2004-09-23    54.69    371.2 1108.36 14.80
+: 4 2004-09-24    55.11    374.5 1110.11 14.28
+: 5 2004-09-27    54.59    370.5 1103.52 14.62
+: 6 2004-09-28    54.15    365.5 1110.06 13.83
+
+#+name: lr
+#+begin_src R :session *R* :exports both :results output
+reg <- lm(idxdata$HYSpread ~ idxdata$SPX); reg
+#+end_src
+
+#+RESULTS: lr
+: 
+: Call:
+: lm(formula = idxdata$HYSpread ~ idxdata$SPX)
+: 
+: Coefficients:
+: (Intercept)  idxdata$SPX  
+:   1542.2195      -0.7756
+
+#+name: lr_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/lr_plot.png
+plot(idxdata$SPX, idxdata$HYSpread, col ="blue", main = "HY ~ SPX", xlab = "SPY", ylab = "HY")
+grid()
+abline(reg, col = "red", lw = 3)
+#+end_src
+
+#+RESULTS: lr_plot
+[[file:./img/lr_plot.png]]
+
+#+name: lr_summary
+#+begin_src R :session *R* :exports both :results output
+summary(reg)
+#+end_src
+
+#+RESULTS: lr_summary
+#+begin_example
+
+Call:
+lm(formula = idxdata$HYSpread ~ idxdata$SPX)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-361.63 -176.98    1.92  128.23  876.08 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 1542.21954   23.54808   65.49   <2e-16 ***
+idxdata$SPX   -0.77563    0.01776  -43.67   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 199.4 on 2364 degrees of freedom
+Multiple R-squared:  0.4465,	Adjusted R-squared:  0.4462 
+F-statistic:  1907 on 1 and 2364 DF,  p-value: < 2.2e-16
+#+end_example
+
+#+name: lr_res
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/lr_reg.png
+layout(matrix(1:4,2,2))
+plot(reg)
+#+end_src
+
+#+RESULTS: lr_res
+[[file:./img/lr_reg.png]]
+
+#+name: lr_quadratic
+#+begin_src R :session *R* :exports both :results output
+reg1 <- lm(idxdata$HYSpread ~ idxdata$SPX + I(idxdata$SPX^2))
+summary(reg1)
+#+end_src
+
+#+RESULTS: lr_quadratic
+#+begin_example
+
+Call:
+lm(formula = idxdata$HYSpread ~ idxdata$SPX + I(idxdata$SPX^2))
+
+Residuals:
+   Min     1Q Median     3Q    Max 
+-355.6 -120.3  -34.6  130.3  422.7 
+
+Coefficients:
+                   Estimate Std. Error t value Pr(>|t|)    
+(Intercept)       4.399e+03  6.852e+01   64.20   <2e-16 ***
+idxdata$SPX      -5.197e+00  1.033e-01  -50.29   <2e-16 ***
+I(idxdata$SPX^2)  1.658e-03  3.844e-05   43.14   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 149.1 on 2363 degrees of freedom
+Multiple R-squared:  0.6904,	Adjusted R-squared:  0.6901 
+F-statistic:  2634 on 2 and 2363 DF,  p-value: < 2.2e-16
+#+end_example
+
+#+name: lr_quadratic_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/lr_quadratic_plot
+plot(idxdata$SPX, idxdata$HYSpread, col = "blue", main = "HY ~ SPX",
+xlab = "SPX", ylab = "HY")
+grid()
+lines(idxdata$SPX, reg1$fitted.values, col = "red", lw = 3)
+#+end_src
+
+#+RESULTS: lr_quadratic_plot
+[[file:./img/lr_quadratic_plot]]
+
+** PCA in R
+#+name: pca_2d_df
+#+begin_src R :session *R* :exports both :results output
+sh <- data.frame(SPX = idxdata$SPX, HY = idxdata$HYSpread)
+head(sh)
+#+end_src
+
+#+RESULTS: pca_2d_df
+:       SPX    HY
+: 1 1129.30 363.0
+: 2 1113.56 367.5
+: 3 1108.36 371.2
+: 4 1110.11 374.5
+: 5 1103.52 370.5
+: 6 1110.06 365.5
+
+#+name: pca_2d
+#+begin_src R :session *R* :exports both :results output
+pca <- prcomp(sh, center = T)
+pca
+#+end_src
+
+#+RESULTS: pca_2d
+: Standard deviations (1, .., p=2):
+: [1] 323.8234 142.0644
+: 
+: Rotation (n x k) = (2 x 2):
+:            PC1       PC2
+: SPX  0.6250655 0.7805723
+: HY  -0.7805723 0.6250655
+
+#+name: pca_2d_summary
+#+begin_src R :session *R* :exports both :results output
+summary(pca)
+#+end_src
+
+#+RESULTS: pca_2d_summary
+: Importance of components:
+:                             PC1      PC2
+: Standard deviation     323.8234 142.0644
+: Proportion of Variance   0.8386   0.1614
+: Cumulative Proportion    0.8386   1.0000
+
+#+name: analysisHelper
+#+begin_src R :session *R* :exports both :results output
+source("./R/analysisHelper.R")
+#+end_src
+
+#+RESULTS: analysisHelper
+
+#+name: pca2dProcess_line
+#+begin_src R :session *R* :exports both :results output
+sh1 <- pca2dProcess(sh)
+head(sh1)
+#+end_src
+
+#+RESULTS: pca2dProcess_line
+:       SPX    HY PcaPrediction
+: 1 1129.30 363.0      749.6469
+: 2 1113.56 367.5      769.3028
+: 3 1108.36 371.2      775.7964
+: 4 1110.11 374.5      773.6111
+: 5 1103.52 370.5      781.8406
+: 6 1110.06 365.5      773.6735
+
+#+RESULTS: pca2dProcess
+[[file:./img/pca2dProcess.png]]
+
+#+name: pca2dProcess
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/pca2dProcess.png
+plot(sh1$SPX, sh1$HY, col = "blue", main = "HY ~ SPY", xlab = "SPX", ylab = "HY")
+lines(sh1$SPX, sh1$PcaPrediction, type = "l", col = "red")
+#+end_src
+
+** Comparing Linear Regression with PCA
+#+name: pcareg
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/pcareg.png
+plot(sh1$SPX, sh1$HY, col = "blue", main = "HY ~ SPY", xlab = "SPX", ylab = "HY")
+grid()
+lines(sh1$SPX, sh1$PcaPrediction, type = "l", col = "red")
+abline(reg, col = "darkgreen")
+#+end_src
+
+#+RESULTS: pcareg
+[[file:./img/pcareg.png]]
+
+#+name: headsh
+#+begin_src R :session *R* :exports both :results output
+head(sh)
+#+end_src
+
+#+RESULTS: headsh
+:       SPX    HY
+: 1 1129.30 363.0
+: 2 1113.56 367.5
+: 3 1108.36 371.2
+: 4 1110.11 374.5
+: 5 1103.52 370.5
+: 6 1110.06 365.5
+
+#+name: regHYSPX
+#+begin_src R :session *R* :exports both :results output
+reg <- lm(sh$HY ~ sh$SPX); reg
+
+#+end_src
+
+#+RESULTS: regHYSPX
+: 
+: Call:
+: lm(formula = sh$HY ~ sh$SPX)
+: 
+: Coefficients:
+: (Intercept)       sh$SPX  
+:   1542.2195      -0.7756
+
+#+name: regSPXHY
+#+begin_src R :session *R* :exports both :results output
+reg1 <- lm(sh$SPX ~ sh$HY); reg1
+
+#+end_src
+
+#+RESULTS: regSPXHY
+: 
+: Call:
+: lm(formula = sh$SPX ~ sh$HY)
+: 
+: Coefficients:
+: (Intercept)        sh$HY  
+:   1610.3409      -0.5756
+
+#+name: regreg1
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/regreg1.png
+plot(sh$SPX, sh$HY, col = "blue", main = "HY ~ SPY", xlab = "SPX", ylab = "HY")
+grid()
+abline(reg, col = "red")
+lines(sh$SPX, 2797.6736 - 1.7373*sh$SPX, type = "l", col = "darkgreen")
+#+end_src
+
+#+RESULTS: regreg1
+[[file:./img/regreg1.png]]
+
+** Multiple Linear Regressions
+** MLR for Indices
+
+#+name: mlr_df
+#+begin_src R :session *R* :exports both :results output
+svh <- data.frame(Date = idxdata$Date, SPX = idxdata$SPX, VIX = idxdata$VIX,
+HY = idxdata$HYSpread)
+head(svh)
+#+end_src
+
+#+RESULTS: mlr_df
+:         Date     SPX   VIX    HY
+: 1 2004-09-21 1129.30 13.66 363.0
+: 2 2004-09-22 1113.56 14.74 367.5
+: 3 2004-09-23 1108.36 14.80 371.2
+: 4 2004-09-24 1110.11 14.28 374.5
+: 5 2004-09-27 1103.52 14.62 370.5
+: 6 2004-09-28 1110.06 13.83 365.5
+
+#+RESULTS: mlr
+: 
+: Call:
+: lm(formula = svh$HY ~ svh$SPX + svh$VIX)
+: 
+: Coefficients:
+: (Intercept)      svh$SPX      svh$VIX  
+:    494.5112      -0.2735      19.3608
+
+#+name: mlr
+#+begin_src R :session *R* :exports both :results output
+reg <- lm(svh$HY ~ svh$SPX + svh$VIX)
+reg
+
+#+end_src
+
+#+name: mlr_summary
+#+begin_src R :session *R* :exports both :results output
+summary(reg)
+#+end_src
+
+#+RESULTS: mlr_summary
+#+begin_example
+
+Call:
+lm(formula = svh$HY ~ svh$SPX + svh$VIX)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-600.65  -74.31  -16.58   75.75  622.25 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 494.51124   22.22553   22.25   <2e-16 ***
+svh$SPX      -0.27352    0.01359  -20.12   <2e-16 ***
+svh$VIX      19.36080    0.31123   62.21   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 122.8 on 2363 degrees of freedom
+Multiple R-squared:  0.7901,	Adjusted R-squared:   0.79 
+F-statistic:  4449 on 2 and 2363 DF,  p-value: < 2.2e-16
+#+end_example
+#+name: mlrplot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/mlrplot.png
+plot(svh$Date, svh$HY, type = "l", col = "blue", main = "HY ~ SPX + VIX",
+xlab = "Date", ylab = "HY")
+lines(svh$Date, reg$fitted.values, type = "l", col = "red")
+legend("topleft", c("HY", "Regression"), lty = c(1, 1), col = c("blue", "red"))
+grid()
+#+end_src
+
+#+RESULTS: mlrplot
+[[file:./img/mlrplot.png]]
+
+#+name: mlrscatter_df
+#+begin_src R :session *R* :exports both :results output
+hp <- data.frame(HY = svh$HY, MLR = reg$fitted.values)
+head(hp)
+#+end_src
+
+#+RESULTS: mlrscatter_df
+:      HY      MLR
+: 1 363.0 450.0959
+: 2 367.5 475.3107
+: 3 371.2 477.8947
+: 4 374.5 467.3484
+: 5 370.5 475.7335
+: 6 365.5 458.6497
+
+#+name: mlrslr
+#+begin_src R :session *R* :exports both :results output
+slr <- lm(hp$HY ~ hp$MLR)
+summary(slr)
+#+end_src
+
+#+RESULTS: mlrslr
+#+begin_example
+
+Call:
+lm(formula = hp$HY ~ hp$MLR)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-600.65  -74.31  -16.58   75.75  622.25 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 2.992e-13  6.155e+00    0.00        1    
+hp$MLR      1.000e+00  1.060e-02   94.34   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 122.8 on 2364 degrees of freedom
+Multiple R-squared:  0.7901,	Adjusted R-squared:  0.7901 
+F-statistic:  8901 on 1 and 2364 DF,  p-value: < 2.2e-16
+#+end_example
+#+name: mlrslrscatter
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/mlrslrscatter.png :cache yes
+plot.new()
+plot(hp$MLR, hp$HY, col = "blue", main = "HY ~ MLR", xlab = "MLR", ylab = "HY")
+abline(slr, col = "red")
+#+end_src
+
+#+RESULTS[137c6abfe94094ace75d2443e99625c6cd757827]: mlrslrscatter
+[[file:./img/mlrslrscatter.png]]
+
+** MLR for Stocks
+#+name: mlrstk_df
+#+begin_src R :session *R* :exports both :results output
+library(quantmod)
+tks <- c("MS", "GS", "C", "XLE")
+stocks <- lapply(tks, function(tk) Ad(na.omit(getSymbols(tk, from = "2004-09-21",
+    To = "2016-01-01", auto.assign = FALSE))))
+stks <- do.call(merge.xts, stocks)
+colnames(stks) <- tks
+head(stks)
+#+end_src
+
+#+RESULTS: mlrstk_df
+:                  MS       GS        C      XLE
+: 2004-09-21 32.53819 77.79574 339.4682 23.75015
+: 2004-09-22 30.26459 76.55788 330.0241 23.59989
+: 2004-09-23 30.76155 76.29555 326.3059 23.38130
+: 2004-09-24 31.07837 76.63162 328.3138 23.64770
+: 2004-09-27 30.29565 76.03323 324.2982 23.63404
+: 2004-09-28 30.34535 76.28732 329.5036 24.03705
+
+#+name: mlrstk_reg
+#+begin_src R :session *R* :exports both :results output
+mlr <- lm(stks$MS ~ stks$GS + stks$C + stks$XLE)
+mlr
+#+end_src
+
+#+RESULTS: mlrstk_reg
+: 
+: Call:
+: lm(formula = stks$MS ~ stks$GS + stks$C + stks$XLE)
+: 
+: Coefficients:
+: (Intercept)      stks$GS       stks$C     stks$XLE  
+:    -2.88417      0.23283      0.05075     -0.12928
+
+#+RESULTS: mlrstk_plot
+[[file:./img/mlrstockplot.png]]
+
+#+name: mlrstk_scatter
+#+begin_src R :session *R* :exports both :results output graphics file mlrstk_scatter.png
+reg <- lm(stks$MS ~ mlr$fitted.values)
+reg
+plot(mlr$fitted.values, stks$MS, col = "blue", main = "MS ~ MLR", xlab = "MLR",
+ylab = "MS")
+abline(reg, col = "red")
+grid()
+
+#+end_src
+
+#+RESULTS: mlrstk_regmlr
+: 
+: Call:
+: lm(formula = stks$MS ~ mlr$fitted.values)
+: 
+: Coefficients:
+:       (Intercept)  mlr$fitted.values  
+:           3.6e-15            1.0e+00
+: Error in if (length(col) < ncol(x)) col <- rep(col, length.out = ncol(x)) : 
+:   argument is of length zero
+
+#+RESULTS: mlrstk_scatter
+[[file:mlrstk_scatter.png]]
+
+** Multiple PCA
+#+name: isv_df
+#+begin_src R :session *R* :exports both :results output
+isv <- data.frame(IG = idxdata$IGSpread, SPX = idxdata$SPX, VIX = idxdata$VIX)
+head(isv)
+
+#+end_src
+
+#+RESULTS: isv_df
+:      IG     SPX   VIX
+: 1 53.93 1129.30 13.66
+: 2 55.18 1113.56 14.74
+: 3 54.69 1108.36 14.80
+: 4 55.11 1110.11 14.28
+: 5 54.59 1103.52 14.62
+: 6 54.15 1110.06 13.83
+
+#+name: isv_pca
+#+begin_src R :session *R* :exports both :results output
+pca <- prcomp(isv, center = T, scale. = T)
+pca
+pca$center
+pca$scale
+#+end_src
+
+#+RESULTS: isv_pca
+#+begin_example
+Standard deviations (1, .., p=3):
+[1] 1.5296439 0.7327263 0.3511435
+
+Rotation (n x k) = (3 x 3):
+           PC1        PC2         PC3
+IG   0.6008241 -0.4302517 -0.67371644
+SPX -0.5087688 -0.8558801  0.09286298
+VIX  0.6165750 -0.2869716  0.73313207
+        IG        SPX        VIX 
+  89.45037 1305.46152   20.25820
+       IG       SPX       VIX 
+ 44.48189 230.79662  10.08152
+#+end_example
+
+#+name: pca1
+#+begin_src R :session *R* :exports both :results output
+pca1 <- data.frame(Pca = 0.6008241 * (isv$IG - pca$center[1])/pca$scale[1] - 
+0.5087688 * (isv$SPX - pca$center[2])/pca$scale[2] +
+0.6165750 * (isv$VIX - pca$center[3])/pca$scale[3])
+head(pca1)
+#+end_src
+
+#+RESULTS: pca1
+:          Pca
+: 1 -0.4949873
+: 2 -0.3773544
+: 3 -0.3688405
+: 4 -0.3988278
+: 5 -0.3705305
+: 6 -0.4392060
+
+
+#+name: pca1_alternative
+#+begin_src R :session *R* :exports both :results output
+pca1 <- data.frame(Pca=pca$x[,1])
+head(pca1)
+#+end_src
+
+#+RESULTS: pca1_alternative
+:          Pca
+: 1 -0.4949873
+: 2 -0.3773544
+: 3 -0.3688405
+: 4 -0.3988278
+: 5 -0.3705305
+: 6 -0.4392060
+
+#+name: pca1_reg
+#+begin_src R :session *R* :exports both :results output
+reg <- lm(idxdata$HYSpread ~ pca1$Pca)
+summary(reg)
+#+end_src
+
+#+RESULTS: pca1_reg
+#+begin_example
+
+Call:
+lm(formula = idxdata$HYSpread ~ pca1$Pca)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-387.01  -55.99   -6.30   52.22  526.28 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  529.659      1.891   280.1   <2e-16 ***
+pca1$Pca     164.503      1.237   133.0   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 91.99 on 2364 degrees of freedom
+Multiple R-squared:  0.8822,	Adjusted R-squared:  0.8821 
+F-statistic: 1.77e+04 on 1 and 2364 DF,  p-value: < 2.2e-16
+#+end_example
+
+#+name: pca1plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/pca1plot.png
+plot(idxdata$Date, idxdata$HYSpread, type="l", col = "blue",
+main = "HY ~ IG + SPY + VIX", xlab = "Date", ylab = "HY")
+grid()
+lines(idxdata$Date, reg$fitted.values, col = "red")
+#+end_src
+
+#+RESULTS: pca1plot
+[[file:./img/pca1plot.png]]
+
+#+name: pca1scatter
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/pca1scatter.png
+reg1 <- lm(idxdata$HYSpread ~ reg$fitted.values)
+plot(reg$fitted.values, idxdata$HYSpread, col = "blue",
+main = "HY ~ IG + SPY + VIX", xlab = "PCA", ylab = "HY")
+abline(reg1, col = "red")
+grid()
+
+#+end_src
+
+#+RESULTS: pca1scatter
+[[file:./img/pca1scatter.png]]
+
+** PCA for Stocks
+#+name: pcastks_df
+#+begin_src R :session *R* :exports both :results output
+pcaData <- stks[,-1]
+head(pcaData)
+#+end_src
+
+#+RESULTS: pcastks_df
+:                  GS        C      XLE
+: 2004-09-21 77.79574 339.4682 23.75015
+: 2004-09-22 76.55788 330.0241 23.59989
+: 2004-09-23 76.29555 326.3059 23.38130
+: 2004-09-24 76.63162 328.3138 23.64770
+: 2004-09-27 76.03323 324.2982 23.63404
+: 2004-09-28 76.28732 329.5036 24.03705
+
+#+name: pcastks
+#+begin_src R :session *R* :exports both :results output
+pca <- prcomp(pcaData, center = T, scale. = T)
+pca
+pca$center
+pca$scale
+#+end_src
+
+#+RESULTS: pcastks
+#+begin_example
+Standard deviations (1, .., p=3):
+[1] 1.3516952 0.9121451 0.5838763
+
+Rotation (n x k) = (3 x 3):
+           PC1        PC2        PC3
+GS   0.5397482 0.67856504 -0.4982182
+C   -0.5150699 0.73432024  0.4421275
+XLE  0.6658640 0.01797971  0.7458565
+       GS         C       XLE 
+152.38920 122.19414  51.32198
+       GS         C       XLE 
+ 45.02310 135.99251  12.28079
+#+end_example
+
+#+name: pcaregstks
+#+begin_src R :session *R* :exports both :results output
+reg <- lm(stks$MS ~ pca$x[,1] + pca$x[,2])
+summary(reg)
+#+end_src
+
+#+RESULTS: pcaregstks
+#+begin_example
+
+Call:
+lm(formula = stks$MS ~ pca$x[, 1] + pca$x[, 2])
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-9.4678 -2.2055 -0.6968  1.8374 14.3235 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 32.16287    0.05245  613.25   <2e-16 ***
+pca$x[, 1]   1.04637    0.03881   26.96   <2e-16 ***
+pca$x[, 2]  12.15232    0.05751  211.33   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 3.314 on 3989 degrees of freedom
+Multiple R-squared:  0.9192,	Adjusted R-squared:  0.9192 
+F-statistic: 2.269e+04 on 2 and 3989 DF,  p-value: < 2.2e-16
+#+end_example
+
+#+name: pcaregstks_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/pcaregstks_plot.png
+plot(as.Date(index(stks)), as.numeric(stks$MS), type="l", col = "blue",
+main = "MS ~ GS + C + XLE", xlab = "Date", ylab = "MS")
+grid()
+lines(as.Date(index(stks)), reg$fitted.values, col = "red")
+legend("topright", c("MS", "MLR"), lty = c(1, 1), col = c("blue", "red"))
+
+#+end_src
+
+#+RESULTS: pcaregstks_plot
+[[file:./img/pcaregstks_plot.png]]
+
+
+#+name: pcaregstks_scatter
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/prcaregstks_scatter.png
+reg1 <- lm(stks$MS ~ reg$fitted.values)
+plot(as.numeric(reg$fitted.values[,1]), as.numeric(stks$MS), col = "blue",
+main = "MS ~ GS + C + XLE", xlab = "PCA", ylab = "MS")
+abline(reg1, col = "red")
+grid()
+
+#+end_src
+
+#+RESULTS: pcaregstks_scatter
+[[file:./img/prcaregstks_scatter.png]]
+
+* Chapter 8: Time Series Analysis
+** Autocorrelation
+#+begin_src latex
+\begin{equation}
+r_{k} = \frac{\sum_{i=1}^{N-k}(Y_{i} - \bar{Y})(Y_{i+k} - 
+         \bar{Y})} {\sum_{i=1}^{N}(Y_{i} - \bar{Y})^{2} }
+\end{equation}
+#+end_src
+
+For autocorrelation functions to make sense, the time series must be weakly stationary.
+Weakly stationary means that the autocorrelation is the same for any particular lag.
+It must satisfy these conditions:
+1. E(yt) is the same for all t.
+2. var(yt) is the same for all t.
+3. cov/corr between yt and yt+k is the same for all t.
+
+*** White Noise
+A collection of uncorrelated variables.  If the values are drawn from a normal distribution, then its Gaussian white noise.
+The noise must also be iid. with mean 0 and variance finite.
+
+#+name: whitenoise_eg
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/whitenoise_eg
+set.seed(1)
+w<-rnorm(1000,0,1)
+plot.ts(w, main = "Gaussian white noise")
+#+end_src
+
+#+RESULTS: whitenoise_eg
+[[file:./img/whitenoise_eg]]
+
+#+name: acf_w
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/acf_w.png
+acf(w)
+#+end_src
+
+#+RESULTS: acf_w
+[[file:./img/acf_w.png]]
+
+*** Random Walk with Drift
+#+name: randomwalk
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/randomwalk.png
+set.seed(3)
+w <- rnorm(300, 0, 1)
+y <- cumsum(w)
+wd <- w + 0.2
+yd <- cumsum(wd)
+plot.ts(yd, ylim=c(-10, 80), main = "Random walk")
+lines(0.2*(1:300), lty="dashed")
+lines(y, col="red")
+#+end_src
+
+#+RESULTS: randomwalk
+[[file:./img/randomwalk.png]]
+
+#+name: randomwalk_acf
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/randomwalk_acf.png
+par(mfrow=c(2,1))
+acf(y)
+acf(yd)
+#+end_src
+
+#+RESULTS: randomwalk_acf
+[[file:./img/randomwalk_acf.png]]
+
+#+name: randomwalk_diff
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/randomwalk_diff.png
+diff <- diff(y)
+plot.ts(diff, type="l")
+#+end_src
+
+#+RESULTS: randomwalk_diff
+[[file:./img/randomwalk_diff.png]]
+
+#+name: acf_diff
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/acf_diff
+acf(diff)
+#+end_src
+
+#+RESULTS: acf_diff
+[[file:./img/acf_diff]]
+
+** Model for Financial Data
+#+name: fin_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/fin_plot.png
+library(quantmod)
+getSymbols("^GSPC", from = "2012-06-01", to = "2014-06-01")
+plot(Cl(GSPC))
+
+#+end_src
+
+#+RESULTS: fin_plot
+[[file:./img/fin_plot.png]]
+
+
+#+name: acf_fin
+#+begin_src R :session *R* :exports both :results output graphics file :file acf_fin.png
+acf(Cl(GSPC))
+#+end_src
+
+#+RESULTS: acf_fin
+[[file:acf_fin.png]]
+#+name: logrtn_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file logrtn_plot.png
+ rtn <- diff(log(Cl(GSPC)))
+plot(rtn)
+#+end_src
+
+#+RESULTS: logrtn_plot
+[[file:logrtn_plot.png]]
+
+
+#+name:logrtn_acf
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/logrtn_acf.png
+acf(rtn,na.action=na.pass)
+#+end_src
+
+#+RESULTS: logrtn_acf
+[[file:./img/logrtn_acf.png]]
+
+*** MOdel Selection
+**** AIC (Akaike Information Criterion): 2k - 2ln(
+**** AICc takes into account sample size: 2kn/(n-k-1)-2ln(L)
+**** BIC: -2ln(L) + kln(n)
+AIC assumes true model infinite number of parameters and attempts to minimize information loss using finite dimensional model.
+As n increases, selection based on AIC equals that based on maximum likelihood.
+AIC favors more complex models with more data.
+BIC is a large-sample approximation to Bayesian selection among fixed set of finite dimensional models.
+BIC does not become equivalent to maximum likelihood selection.
+BIC will favor consistent selection among a fixed family of models.
+
+*** ARIMA Model
+**** AR Model (autoregressive model)
+Data needs to be stationary.
+Timepoint y is predicted by alpha * previous timepoint + w (error).
+Stationary is when all absolute values of the roots of equation is greater than unity.
+The equation is the characteristic equation:
+1 - alpha1*B - alpha2*B^2 - ... - alphap*B^p = 0
+Random walk is an AR(1) model when alpha = 1.
+
+****** AR(1)
+#+name: ar1
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/ar1.png
+set.seed(1)
+y <- arima.sim(n = 100, list(ar = 0.5))
+layout(1: 2)
+plot(y)
+acf(y)
+#+end_src
+
+#+RESULTS: ar1
+[[file:./img/ar1.png]]
+#+name:autoar1
+#+begin_src R :session *R* :exports both :results output
+auto.arima(y)
+#+end_src
+
+#+RESULTS: autoar1
+: Series: y 
+: ARIMA(0,1,0) 
+: 
+: sigma^2 estimated as 0.9859:  log likelihood=-422.14
+: AIC=846.29   AICc=846.3   BIC=849.99
+*** MA model (moving average model)
+linear combination of past white noise terms (with some beta)
+Means are 0.
+#+name: ma1_plots
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/ma1_plots.png
+set.seed(2)
+y <- arima.sim(n = 100, list(ma = 0.5))
+layout(1:2)
+plot(y)
+acf(y)
+#+end_src
+
+#+RESULTS: ma1_plots
+[[file:./img/ma1_plots.png]]
+
+#+name: automa1
+#+begin_src R :session *R* :exports both :results output
+auto.arima(y)
+#+end_src
+
+#+RESULTS: automa1
+#+begin_example
+Series: y 
+ARIMA(0,0,1) with zero mean 
+
+Coefficients:
+         ma1
+      0.4219
+s.e.  0.0867
+
+sigma^2 estimated as 1.346:  log likelihood=-156.35
+AIC=316.7   AICc=316.83   BIC=321.92
+#+end_example
+
+#+name: ma2
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/ma2.png
+set.seed(1)
+y <- arima.sim(n = 200, list(ma = c(0.7, 0.5)))
+layout(1:2)
+plot(y)
+ic <- acf(y)
+#+end_src
+
+#+RESULTS: ma2
+[[file:./img/ma2.png]]
+
+#+name: automa2
+#+begin_src R :session *R* :exports both :results output
+auto.arima(y,max.p=0)
+#+end_src
+
+#+RESULTS: automa2
+#+begin_example
+Series: y 
+ARIMA(0,0,3) with zero mean 
+
+Coefficients:
+         ma1     ma2     ma3
+      0.8982  0.5267  0.2842
+s.e.  0.0720  0.0883  0.0806
+
+sigma^2 estimated as 0.906:  log likelihood=-272.88
+AIC=553.75   AICc=553.96   BIC=566.94
+#+end_example
+*** Autoregressive Moving Average Model (ARMA)
+Past values and white noise.
+Special form of ARIMA, without differencing.
+
+#+name: arma101
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/arma101.png
+set.seed(1)
+y <- arima.sim(n = 200, list(ar = 0.6, ma = 0.3))
+layout(1:2)
+plot(y)
+acf(y)
+#+end_src
+
+#+RESULTS: arma101
+[[file:./img/arma101.png]]
+
+#+name: arma101_eval
+#+begin_src R :session *R* :exports both :results output
+arima(y,order=c(1,0,1))
+#+end_src
+
+#+RESULTS: arma101_eval
+#+begin_example
+
+Call:
+arima(x = y, order = c(1, 0, 1))
+
+Coefficients:
+         ar1     ma1  intercept
+      0.6094  0.2587     0.1367
+s.e.  0.0745  0.0913     0.2130
+
+sigma^2 estimated as 0.8882:  log likelihood = -272.34,  aic = 552.68
+#+end_example
+
+#+name: arma202
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/arma202.png
+set.seed(1)
+y <- arima.sim(n = 500, list(ar = c(0.8, -0.5), ma = c(0.6, -0.4)))
+layout(1:2)
+plot(y, type = "l")
+acf(y)
+#+end_src
+
+#+RESULTS: arma202
+[[file:./img/arma202.png]]
+#+name: arma202_eval
+#+begin_src R :session *R* :exports both :results output
+arima(y,order=c(2,0,2))
+#+end_src
+
+#+RESULTS: arma202_eval
+#+begin_example
+
+Call:
+arima(x = y, order = c(2, 0, 2))
+
+Coefficients:
+         ar1      ar2     ma1      ma2  intercept
+      0.8283  -0.5139  0.5488  -0.4512     0.0060
+s.e.  0.0761   0.0392  0.0871   0.0869     0.0726
+
+sigma^2 estimated as 1.027:  log likelihood = -719.95,  aic = 1451.91
+#+end_example
+#+name: arma403
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/arma403.png
+set.seed(2)
+y <- arima.sim(n=1000, list(ar = c(0.3, 0.9, 0.1, -0.8), ma = c(0.9, 0.8, 0.72)))
+layout(1:2)
+plot(y, type = "l")
+acf(y)
+#+end_src
+
+#+RESULTS: arma403
+[[file:./img/arma403.png]]
+#+name: arma403_eval
+#+begin_src R :session *R* :exports both :results output
+fit<-auto.arima(y)
+fit
+#+end_src
+
+#+RESULTS: arma403_eval
+#+begin_example
+Series: y 
+ARIMA(4,0,3) with non-zero mean 
+
+Coefficients:
+         ar1     ar2     ar3      ar4     ma1     ma2     ma3    mean
+      0.3314  0.8765  0.0906  -0.7818  0.8996  0.8270  0.7257  0.4081
+s.e.  0.0208  0.0244  0.0241   0.0206  0.0243  0.0236  0.0248  0.2211
+
+sigma^2 estimated as 0.9656:  log likelihood=-1403.22
+AIC=2824.44   AICc=2824.62   BIC=2868.61
+#+end_example
+#+name: arma403_resid
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/arma403_resid.png
+acf(resid(fit))
+#+end_src
+
+#+RESULTS: arma403_resid
+[[file:./img/arma403_resid.png]]
+
+The Ljung-Box test confirms the white noise model of the residuals.
+#+name:arma403_resid_ljung-box
+#+begin_src R :session *R* :exports both :results output graphic file :file ./img/arma403_resid_ljung-box.png
+Box.test(resid(fit),lag=30,type="Ljung-Box")
+#+end_src
+
+#+RESULTS: arma403_resid_ljung-box
+[[file:./img/arma403_resid_ljung-box.png]]
+
+#+name: arima_gspc
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/arima_gspc.png
+getSymbols("^GSPC", from = "1980-01-01", to = "2016-01-01")
+spx <- na.omit(diff(log(Ad(GSPC))))
+layout(1:2)
+plot(spx, type="l")
+acf(spx)
+#+end_src
+
+#+RESULTS: arima_gspc
+[[file:./img/arima_gspc.png]]
+#+name: autoarima_spx
+#+begin_src R :session *R* :exports both :results output
+fit <- auto.arima(spx)
+fit
+Box.test(resid(fit), lag=30, type = "Ljung-Box")
+
+#+end_src
+
+#+RESULTS: autoarima_spx
+#+begin_example
+Series: spx 
+ARIMA(2,0,1) with non-zero mean 
+
+Coefficients:
+         ar1      ar2      ma1   mean
+      0.6523  -0.0188  -0.6807  3e-04
+s.e.  0.1118   0.0133   0.1114  1e-04
+
+sigma^2 estimated as 0.0001263:  log likelihood=27871.21
+AIC=-55732.43   AICc=-55732.42   BIC=-55696.86
+
+	Box-Ljung test
+
+data:  resid(fit)
+X-squared = 77.632, df = 30, p-value = 4.302e-06
+#+end_example
+There is poor fit.  In practice, ARMA models are not good models for financial data.
+
+*** ARIMA Model Applications
+
+#+name: arima111_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file arima111_plot.png
+set.seed(1)
+y <- arima.sim(n = 1000, list(order = c(1,1,1), ar = 0.8, ma = -0.6))
+layout(1:2)
+plot(y)
+acf(y)
+#+end_src
+
+#+RESULTS: arima111_plot
+[[file:arima111_plot.png]]
+Use auto arima and AIC criterion.
+
+#+name: autoarima111_aic
+#+begin_src R :session *R* :exports both :results output
+aic.fit <- auto.arima(y, approximation = FALSE, ic = "aic")
+aic.fit
+#+end_src
+
+#+RESULTS: autoarima111_aic
+#+begin_example
+Series: y 
+ARIMA(2,1,2) 
+
+Coefficients:
+          ar1     ar2     ma1      ma2
+      -0.1073  0.7623  0.2801  -0.6682
+s.e.   0.0724  0.0604  0.0857   0.0793
+
+sigma^2 estimated as 1.064:  log likelihood=-1448.28
+AIC=2906.55   AICc=2906.61   BIC=2931.09
+#+end_example
+Using BIC, we recover ARIMA(1,1,1)
+#+name: autoarima111_bic
+#+begin_src R :session *R* :exports both :results output
+bic.fit <- auto.arima(y, approximation = FALSE, ic = "bic")
+bic.fit
+#+end_src
+
+#+RESULTS: autoarima111_bic
+#+begin_example
+Series: y 
+ARIMA(1,1,1) 
+
+Coefficients:
+         ar1      ma1
+      0.7972  -0.6502
+s.e.  0.0714   0.0912
+
+sigma^2 estimated as 1.075:  log likelihood=-1454.07
+AIC=2914.13   AICc=2914.16   BIC=2928.86
+#+end_example
+
+Run time series diagnostics.
+#+name: tsdiag_aic
+#+begin_src R :session *R* :exports both :results output graphics file :file tsdiag_aic.png
+tsdiag(aic.fit)
+#+end_src
+
+#+RESULTS: tsdiag_aic
+[[file:tsdiag_aic.png]]
+
+#+RESULTS: tsdiag
+[[file:tsdiag.png]]
+#+name: tsdiag_bic
+#+begin_src R :session *R* :exports both :results output graphics file :file tsdiag_bic.png
+tsdiag(bic.fit)
+#+end_src
+
+#+RESULTS: tsdiag_bic
+[[file:tsdiag_bic.png]]
+
+Checking fit
+
+#+name: arima111_fit
+#+begin_src R :session *R* :exports both :results output grpahics file :file ./img/arima111_fit.png
+plot(y)
+lines(fitted(aic.fit), col = "red")
+lines(fitted(bic.fit), col = "green")
+#+end_src
+
+#+RESULTS: arima111_fit
+[[file:./img/arima111_fit.png]]
+ARIMA applied to SPX
+
+#+name: spx_arima_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/spx_arima_plot.png
+library(quantmod)
+getSymbols("^GSPC", from = "2007-01-01", to = "2016-01-01")
+sp <- Ad(GSPC)
+plot(sp)
+#+end_src
+
+#+RESULTS: spx_arima_plot
+[[file:./img/spx_arima_plot.png]]
+
+#+name: sparima
+#+begin_src R :session *R* :exports both :results output
+sp.arima <- auto.arima(sp, approximation = FALSE)
+sp.arima
+#+end_src
+
+#+RESULTS: sparima
+#+begin_example
+Series: sp 
+ARIMA(1,1,1) 
+
+Coefficients:
+         ar1      ma1
+      0.5726  -0.6529
+s.e.  0.1460   0.1354
+
+sigma^2 estimated as 272.1:  log likelihood=-9561.89
+AIC=19129.78   AICc=19129.79   BIC=19146.96
+#+end_example
+Residual plot
+
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/sparima_res.png
+plot(sp.arima$residuals)
+#+end_src
+
+#+RESULTS:
+[[file:./img/sparima_res.png]]
+Other diagnostics with tsdiag
+#+name: sp_tsdiag
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/sp_tsdiag.png
+tsdiag(sp.arima)
+#+end_src
+
+#+RESULTS: sp_tsdiag
+[[file:./img/sp_tsdiag.png]]
+
+Forecast with sp arima model
+
+#+name: sparima_forecast
+#+begin_src R :session *R* :exports both :results output graphics file :file sparima_forecast.png
+plot(forecast(sp.arima, h = 30))
+#+end_src
+
+#+RESULTS: sparima_forecast
+[[file:sparima_forecast.png]]
+
+** GARCH Model
+In ARIMA models, conditional variance (past variance) is constant.
+However, there are clusters of variability in the SPX residuals, suggesting variance is not constant.
+ARIMA models provide linear forecasts.
+Need to use generalized autoregressive conditional heteroscdasticity (GARCH) models.
+
+To see if GARCH is needed, check for clusters of variability in residuals and squared residuals.
+ACF of squared residuals also help confirm whether residuals are dependent.
+
+Let's check squared residuals acf.
+
+#+name: sparima_sqres
+#+begin_src R :session *R* :exports both :results output graphics file :file sparima_sqres.png
+res2 <- sp.arima$residuals^2
+layout(1:2)
+plot(res2)
+acf(res2)
+#+end_src
+
+#+RESULTS: sparima_sqres
+[[file:sparima_sqres.png]]
+
+ARCH assumes that error variance (sometimes called innovation) is related to previous squared error.
+It's like applying AR(q) model to error variance.
+
+Financial time series are usually modeled in two phases. 
+First, find best fitting ARIMA.
+Plot residuals and look for nonlinearity or variabliity clusters.
+Then use GARCH to model the nonlinear patterns of the residuals.
+Then apply the hybrid model, combinging ARIMA and GARCH.
+
+#+name: spgarch
+#+begin_src R :session *R* :exports both :results output
+sp.garch <- garch(sp.arima$residuals, order = c(1, 1), trace = FALSE)
+summary(sp.garch)
+#+end_src
+
+#+RESULTS: spgarch
+#+begin_example
+
+Call:
+garch(x = sp.arima$residuals, order = c(1, 1), trace = FALSE)
+
+Model:
+GARCH(1,1)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-5.6793 -0.4959  0.1168  0.6432  3.0569 
+
+Coefficient(s):
+    Estimate  Std. Error  t value Pr(>|t|)    
+a0   7.32201     1.24338    5.889 3.89e-09 ***
+a1   0.09988     0.01025    9.748  < 2e-16 ***
+b1   0.87142     0.01363   63.938  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Diagnostic Tests:
+	Jarque Bera Test
+
+data:  Residuals
+X-squared = 262.88, df = 2, p-value < 2.2e-16
+
+
+	Box-Ljung test
+
+data:  Squared.Residuals
+X-squared = 3.9171, df = 1, p-value = 0.0478
+#+end_example
+
+Test goodness of fit by plotting GARCH residuals.
+#+name: garch_res
+#+begin_src R :session *R* :exports both :results output graphics file :file garch_res.png
+layout(1:2)
+acf(sp.garch$residuals, na.action = na.pass)
+acf(sp.garch$residuals^2, na.action = na.pass)
+#+end_src
+
+#+RESULTS: garch_res
+[[file:garch_res.png]]
+
+The next step would be to get the forecasts from this, but the book doesn't show how to do that.
+
+** Cointegration
+The idea is the find a linear combination of two or more time series that yields a stationary time series.
+One finance strategy is to use a mean-reerting strategy, where buy low, wait for reversion to mean, then sell at the higher price.
+However, most price series are not mean-reverting.
+We can apply a mean-reverting strategy if we make the time series stationary.
+*** Testing for Stationarity
+We can test for stationarity using the Augmented Dickey Fuller (ADF) test.
+The ADF testswhether capital lambda is 0, which indicates that price changes are completely independent.
+
+#+name: spy_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file spy_plot.png
+library(quantmod)
+getSymbols("SPY", to = "2016-01-01")
+spy <- Ad(SPY)
+plot.new()
+plot(spy)
+#+end_src
+
+#+RESULTS: spy_plot
+[[file:spy_plot.png]]
+
+Augmented Dickey Fuller Test for SPY
+
+#+name: adf_spy
+#+begin_src R :session *R* :exports both :results output 
+spy.adf <- ur.df(spy, type = "trend", selectlags = "AIC")
+summary(spy.adf)
+#+end_src
+
+#+RESULTS: adf_spy
+#+begin_example
+
+############################################### 
+# Augmented Dickey-Fuller Test Unit Root Test # 
+############################################### 
+
+Test regression trend 
+
+
+Call:
+lm(formula = z.diff ~ z.lag.1 + 1 + tt + z.diff.lag)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-7.9014 -0.6377  0.0781  0.7021  9.9537 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)  
+(Intercept)  1.566e-01  1.139e-01   1.375   0.1693  
+z.lag.1     -2.643e-03  1.377e-03  -1.919   0.0551 .
+tt           1.796e-04  7.564e-05   2.374   0.0177 *
+z.diff.lag  -5.149e-02  2.101e-02  -2.451   0.0143 *
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 1.358 on 2260 degrees of freedom
+Multiple R-squared:  0.005144,	Adjusted R-squared:  0.003824 
+F-statistic: 3.895 on 3 and 2260 DF,  p-value: 0.008649
+
+
+Value of test-statistic is: -1.9187 2.4312 2.8176 
+
+Critical values for test statistics: 
+      1pct  5pct 10pct
+tau3 -3.96 -3.41 -3.12
+phi2  6.09  4.68  4.03
+phi3  8.27  6.25  5.34
+#+end_example
+
+The book says that tau3 = -1.9187, phi2 = 2.4312, and phi3=2.9176.
+The book says we fail to reject the null for phi3, indicating SPY daily price contains a unit root.
+This is confirmed by tar3, which is not more negative than 10% level.  So we cannot reject a unit root.
+Then we examine whether SPY is a random walk with or without drift--if so, then not stationary.
+phi2 is less than critical values, so SPY acts as a random walk.
+there are more test.  The book suggests we read more about them. (p.285)
+
+
+*** Cointegrating time Series
+There are two approaches.
+
+**** covariate Augmented Dickery-Fuller Test
+ First approach is the covariate (cointegration) Augmented Dickey-Fuller Test.
+ First proposed by Eagle and Granger (1987), tis approach performs lr to fit the two or more time series.
+ Then you apply the normal ADF test.
+
+ SPY and IWM Example
+ #+name: spyiwm_co
+ #+begin_src R :session *R* :exports both :results output graphics file :file ./img/spyiwm_co.png
+library(quantmod) 
+getSymbols("IWM", to = "2016-01-01")
+ iwm <- Ad(IWM)
+plot.new()
+ plot(spy, ylim = c(30,210), main = ("SPY and IWM"))
+ lines(iwm, col = "red")
+ #legend("topleft", c("SPY", "IWM"), col = c("black", "red"), lty = c(1,1))
+ #+end_src
+
+ #+RESULTS: spyiwm_co
+ [[file:./img/spyiwm_co.png]]
+
+ Regress spy on iwm
+
+ #+name: spyoniwm
+ #+begin_src R :session *R* :exports both :results output
+ lm(spy ~ iwm + 1)
+ #+end_src
+
+ #+RESULTS: spyoniwm
+ : 
+ : Call:
+ : lm(formula = spy ~ iwm + 1)
+ : 
+ : Coefficients:
+ : (Intercept)          iwm  
+ :       4.111        1.586
+
+ Test for stationarity of residual series:
+
+ #+name: spyiwm_res
+ #+begin_src R :session *R* :exports both :results output
+ res <- ur.df(spy-4.468-1.626*iwm, type = "none", selectlags = "AIC")
+ summary(res)
+ #+end_src
+
+ #+RESULTS: spyiwm_res
+ #+begin_example
+
+ ############################################### 
+ # Augmented Dickey-Fuller Test Unit Root Test # 
+ ############################################### 
+
+ Test regression none 
+
+
+ Call:
+ lm(formula = z.diff ~ z.lag.1 - 1 + z.diff.lag)
+
+ Residuals:
+     Min      1Q  Median      3Q     Max 
+ -5.0930 -0.4494 -0.0340  0.4162  3.7131 
+
+ Coefficients:
+             Estimate Std. Error t value Pr(>|t|)  
+ z.lag.1    -0.005789   0.002391  -2.422   0.0155 *
+ z.diff.lag -0.025443   0.021030  -1.210   0.2265  
+ ---
+ Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+ Residual standard error: 0.7266 on 2262 degrees of freedom
+ Multiple R-squared:  0.003399,	Adjusted R-squared:  0.002518 
+ F-statistic: 3.857 on 2 and 2262 DF,  p-value: 0.02127
+
+
+ Value of test-statistic is: -2.4217 
+
+ Critical values for test statistics: 
+       1pct  5pct 10pct
+ tau1 -2.58 -1.95 -1.62
+ #+end_example
+
+ -2.4217 is less than 5%, so we can reject null that lambda is zero.
+ That is, SPY and IWM are cointegrating at the .05 level.
+
+**** Johansen Test
+Our goal is the form a stationary price series out of an arbirary number of series.
+We then examine whether capital lambda (a matrix) can be rejected.
+r equals the number of independently combined series.
+Johansen computer r baed on eigenvector decomposition of capital lambda to test whether we can reject the null hypothesis that r = n.
+The eigenvectors are hedge ratios and can then be combined to form a stationary series.
+
+Example
+
+Looks like we mean normalize the scores first.
+
+#+name: joh
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/joh.png
+getSymbols(c("MS", "GS", "C"), from = "2010-01-01", to ="2016-01-01")
+ms <- Ad(MS)
+gs <- Ad(GS)
+c <- Ad(C)
+plot(ms/mean(ms), main = "Mean normalized prices for MS, GS, and C")
+lines(gs/mean(gs), col = "red")
+lines(c/mean(c), col = "blue")
+#legend("topleft", c("MS", "GS", "C"), col = c("black", "red", "blue"), lty = c(1,1,1))
+#+end_src
+
+#+RESULTS: joh
+[[file:./img/joh.png]]
+
+Perform Johansen test on three stocks
+#+name: johtest
+#+begin_src R :session *R* :exports both :results output
+prices <- na.omit(merge(ms, gs, c))
+result <- ca.jo(prices, type = "eigen", ecdet = "const")
+summary(result)
+#+end_src
+
+#+RESULTS: johtest
+#+begin_example
+
+###################### 
+# Johansen-Procedure # 
+###################### 
+
+Test type: maximal eigenvalue statistic (lambda max) , without linear trend and constant in cointegration 
+
+Eigenvalues (lambda):
+[1] 2.642826e-02 8.175185e-03 9.652049e-04 2.658500e-19
+
+Values of teststatistic and critical values of test:
+
+          test 10pct  5pct  1pct
+r <= 2 |  1.46  7.52  9.24 12.97
+r <= 1 | 12.38 13.75 15.67 20.20
+r = 0  | 40.39 19.77 22.00 26.81
+
+Eigenvectors, normalised to first column:
+(These are the cointegration relations)
+
+               MS.Adjusted.l2 GS.Adjusted.l2 C.Adjusted.l2   constant
+MS.Adjusted.l2      1.0000000      1.0000000     1.0000000   1.000000
+GS.Adjusted.l2     -0.4338740     -0.1573598     0.3349882   1.251625
+C.Adjusted.l2       0.8562129     -0.2441210    -0.2506577 -19.160619
+constant            2.7190780      8.3617592   -62.1702500 115.074221
+
+Weights W:
+(This is the loading matrix)
+
+              MS.Adjusted.l2 GS.Adjusted.l2 C.Adjusted.l2     constant
+MS.Adjusted.d   -0.001238315   -0.012044880 -0.0008156064 2.020359e-19
+GS.Adjusted.d    0.021507309    0.008929769 -0.0044987255 5.237316e-19
+C.Adjusted.d    -0.026951439   -0.002360268 -0.0012925429 3.771185e-19
+#+end_example
+We can only reject null when r = 0.
+We construct the stationary series using the first column, which corresponds to the largest eigenvalue. (is this true?)
+
+Plot combined stationary series
+#+name: coseries
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/coseries.png
+spread = ms - 0.4517*gs + 0.8659*c + 2.8859
+plot(spread)
+#+end_src
+
+#+RESULTS: coseries
+[[file:./img/coseries.png]]
+
+It looks like the combined series showed mean-reverting behavior.
+
+* Chapter 9: Machine Learning
+Supervised learning is widely used in finance.
+** KNN Classifier
+Non-parametric and can be used for classification or regression.
+*** KNN Model
+Near objects have similar characteristics.
+New instances classified by majority vote of /k/-neighbors.
+Based on Euclidiean distance.
+**** KNN Model for Classification
+In this section, we will predict stock price direction.
+We will use global stock data as input features to predict moving direction for FTSE 100 index.
+We believe that the timing of Nikkei 225 (Tokyo) influences London stock prices the next day.
+IVs: open, high, low, close, and daily returns for FTSE and N225.
+DV: today's market move direction, up or down (+ or -_
+
+We can use todays N225 as predictors because Tokyo sotck market already closed before London market opens.
+However, we cannot use today's direction for London because today hasn't happened yet.
+
+Yahoo does not provie recent historical data for FTSE.  Se we load data from a csv file.
+Use the lead command to offset the direction field by one day. (yesterday -> today)
+
+Load Machinelearning.R file
+#+name: machineLearning
+#+begin_src R :session *R* :exports none :results none
+source("./R/machineLearning.R")
+#+end_src
+
+Load FTSE and N225 data
+#+name: loadftsen225
+#+begin_src R :session *R* :exports both :results output
+fn <- processFtseN225Data()
+head(fn, 10)
+#+end_src
+
+#+RESULTS: loadftsen225
+#+begin_example
+         Date FTSE.Open FTSE.High FTSE.Low FTSE.Close    FTSE.Rtn N225.Open
+1  2010-01-04   5412.88   5500.34  5410.82    5500.34  0.00000000  10719.44
+2  2010-01-05   5500.34   5536.38  5480.71    5522.50  0.40288419  10709.55
+3  2010-01-06   5522.50   5536.48  5497.65    5530.04  0.13653237  10742.75
+4  2010-01-07   5530.04   5551.66  5499.80    5526.72 -0.06003573  10743.30
+5  2010-01-08   5526.72   5549.25  5494.79    5534.24  0.13606624  10770.35
+6  2010-01-12   5538.07   5549.61  5459.94    5498.71 -0.71071691  10795.48
+7  2010-01-13   5498.71   5509.67  5450.85    5473.48 -0.45883489  10778.07
+8  2010-01-14   5473.48   5521.90  5473.48    5498.20  0.45163223  10917.41
+9  2010-01-15   5498.20   5527.02  5450.38    5455.37 -0.77898221  10887.61
+10 2010-01-18   5455.37   5504.00  5454.31    5494.39  0.71525854  10866.83
+   N225.High N225.Low N225.Close   N225.Rtn Direction
+1   10791.04 10655.57   10681.83  0.2537829        UP
+2   10768.61 10661.17   10731.45  0.4645282        UP
+3   10774.00 10636.67   10681.66 -0.4639638      DOWN
+4   10816.45 10677.56   10798.32  1.0921538        UP
+5   10905.39 10763.68   10879.14  0.7484436      DOWN
+6   10866.62 10729.86   10735.03 -1.3246394      DOWN
+7   10909.94 10774.25   10907.68  1.6082807        UP
+8   10982.10 10878.83   10982.10  0.6822709      DOWN
+9   10895.10 10781.03   10855.08 -1.1566052        UP
+10  10866.83 10749.47   10764.90 -0.8307602        UP
+#+end_example
+
+Split data into test and train
+#+name: split
+#+begin_src R :session *R* :exports both :results output
+fn.train <- with(fn, fn[Date >= "2010-01-01" & Date <= "2014-12-31",])
+fn.test <- with(fn, fn[Date >= "2015-01-01",])
+#+end_src
+
+#+RESULTS: split
+
+Train the KNN Model using the train function
+
+#+name: train_knn
+#+begin_src R :session *R* :exports both :results output
+set.seed(1)
+fn.knn <- train(Direction ~ ., data = fn.train[,-1], method = "knn",
+                trControl = trainControl(method = "repeatedcv", repeats = 3),
+                preProcess = c("center","scale"), tuneLength = 50)
+#+end_src
+
+#+RESULTS: train_knn
+
+
+This model uses 10-fold crossvalidation, repeated (here) 3 times.  It would be good to learn how it does this from the documentation.
+
+Show model results
+#+name: knnclass_results
+#+begin_src R :session *R* :exports both :results output
+fn.knn
+#+end_src
+
+#+RESULTS: knnclass_results
+#+begin_example
+k-Nearest Neighbors 
+
+1192 samples
+  10 predictor
+   2 classes: 'DOWN', 'UP' 
+
+Pre-processing: centered (10), scaled (10) 
+Resampling: Cross-Validated (10 fold, repeated 3 times) 
+Summary of sample sizes: 1073, 1072, 1072, 1073, 1073, 1073, ... 
+Resampling results across tuning parameters:
+
+  k    Accuracy   Kappa     
+    5  0.5406026  0.07707570
+    7  0.5307705  0.05757382
+    9  0.5380489  0.07159595
+   11  0.5495243  0.09330675
+   13  0.5525892  0.09863465
+   15  0.5512003  0.09538997
+   17  0.5660395  0.12559369
+   19  0.5705001  0.13431845
+   21  0.5651873  0.12368487
+   23  0.5663005  0.12511593
+   25  0.5704837  0.13365812
+   27  0.5796830  0.15231048
+   29  0.5867000  0.16637323
+   31  0.5881076  0.16921754
+   33  0.5889434  0.17101132
+   35  0.5920388  0.17754017
+   37  0.5951129  0.18357861
+   39  0.5973421  0.18759681
+   41  0.5931404  0.17873537
+   43  0.5981754  0.18911737
+   45  0.6006848  0.19395187
+   47  0.6028953  0.19854030
+   49  0.6015156  0.19550108
+   51  0.5992654  0.19077423
+   53  0.6031799  0.19839196
+   55  0.5998232  0.19138709
+   57  0.6006660  0.19307620
+   59  0.6051456  0.20210594
+   61  0.6009462  0.19358572
+   63  0.6026268  0.19606696
+   65  0.6031752  0.19691762
+   67  0.6040133  0.19820572
+   69  0.6073677  0.20457490
+   71  0.6026196  0.19486267
+   73  0.6023395  0.19455030
+   75  0.6023301  0.19448917
+   77  0.5973093  0.18420313
+   79  0.5989806  0.18767030
+   81  0.5961795  0.18204971
+   83  0.5956404  0.18082816
+   85  0.5989924  0.18712784
+   87  0.5953461  0.17981105
+   89  0.5945198  0.17811865
+   91  0.5922788  0.17344317
+   93  0.5922764  0.17333611
+   95  0.5939243  0.17678026
+   97  0.5939313  0.17685368
+   99  0.5875169  0.16408313
+  101  0.5877876  0.16476684
+  103  0.5889034  0.16700159
+
+Accuracy was used to select the optimal model using the largest value.
+The final value used for the model was k = 69.
+#+end_example
+
+Show accuracy
+#+name: train_knn_acc
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/train_knn_acc.png
+plot(fn.knn)
+#+end_src
+
+#+RESULTS: train_knn_acc
+[[file:./img/train_knn_acc.png]]
+
+Predict on test set with confusion matrix
+
+#+name: train_knn_test
+#+begin_src R :session *R* :exports both :results output
+fn.knn.predict <- predict(fn.knn, newdata = fn.test[,-1])
+confusionMatrix(fn.knn.predict, as.factor(fn.test$Direction))
+#+end_src
+
+#+RESULTS: train_knn_test
+#+begin_example
+Confusion Matrix and Statistics
+
+          Reference
+Prediction DOWN  UP
+      DOWN  100  76
+      UP     16  45
+                                          
+               Accuracy : 0.6118          
+                 95% CI : (0.5466, 0.6742)
+    No Information Rate : 0.5105          
+    P-Value
+NIR] : 0.001082        
+                                          
+                  Kappa : 0.2315          
+                                          
+ Mcnemar's Test P-Value : 7.691e-10       
+                                          
+            Sensitivity : 0.8621          
+            Specificity : 0.3719          
+         Pos Pred Value : 0.5682          
+         Neg Pred Value : 0.7377          
+             Prevalence : 0.4895          
+         Detection Rate : 0.4219          
+   Detection Prevalence : 0.7426          
+      Balanced Accuracy : 0.6170          
+                                          
+       'Positive' Class : DOWN
+#+end_example
+
+#+name: knn_test_predict
+#+begin_src R :session *R* :exports both :results output
+fn.test$Predict <- fn.knn.predict
+head(fn.test)
+#+end_src
+
+#+RESULTS: knn_test_predict
+#+begin_example
+           Date FTSE.Open FTSE.High FTSE.Low FTSE.Close   FTSE.Rtn N225.Open
+1193 2015-01-05   6547.80   6576.74  6404.49    6417.16 -1.9951740  17101.58
+1194 2015-01-06   6417.16   6452.66  6328.59    6366.51 -0.7892900  16808.26
+1195 2015-01-07   6366.51   6459.74  6366.51    6419.83  0.8375075  17067.40
+1196 2015-01-08   6419.83   6580.82  6419.83    6569.96  2.3385354  17318.74
+1197 2015-01-09   6569.96   6570.24  6471.38    6501.14 -1.0474950  16970.88
+1198 2015-01-13   6501.42   6558.83  6465.19    6542.20  0.6272476  16961.82
+     N225.High N225.Low N225.Close    N225.Rtn Direction Predict
+1193  17111.36 16881.73   16883.19 -3.01872716      DOWN    DOWN
+1194  16974.61 16808.26   16885.33  0.01267903        UP    DOWN
+1195  17243.71 17016.09   17167.10  1.66872385        UP      UP
+1196  17342.65 17129.53   17197.73  0.17842769      DOWN      UP
+1197  17087.71 16828.27   17087.71 -0.63973285        UP    DOWN
+1198  17036.72 16770.56   16795.96 -1.70736737      DOWN    DOWN
+#+end_example
+
+Compare predicted results with real market moves
+#+name:
+#+begin_src R :session *R* :exports both :results output
+fn.test$Predict <- fn.knn.predict
+head(fn.test, 20)
+#+end_src
+
+*** Confusion Matrix
+Accuracy is along diagonal.
+Easy to calculate.
+
+*** KNN Model for Regression
+Change Direction to Expected to predict continuous values
+
+#+name: knnreg
+#+begin_src R :session *R* :exports both :results output
+fnReg <- fn
+colnames(fnReg)[colnames(fnReg)=="Direction"] <- "Expected"
+#+end_src
+
+#+RESULTS: knnreg
+
+Offset the FTSE close prices by one day and place them into the Expected column
+
+#+name: knnreg_offset
+#+begin_src R :session *R* :exports both :results output
+fnReg$Expected <- lead(fnReg$FTSE.Close)
+fnReg <- fnReg[-nrow(fnReg),]  #Remove the last row with NA
+head(fnReg)
+
+#+end_src
+
+#+RESULTS: knnreg_offset
+#+begin_example
+        Date FTSE.Open FTSE.High FTSE.Low FTSE.Close    FTSE.Rtn N225.Open
+1 2010-01-04   5412.88   5500.34  5410.82    5500.34  0.00000000  10719.44
+2 2010-01-05   5500.34   5536.38  5480.71    5522.50  0.40288419  10709.55
+3 2010-01-06   5522.50   5536.48  5497.65    5530.04  0.13653237  10742.75
+4 2010-01-07   5530.04   5551.66  5499.80    5526.72 -0.06003573  10743.30
+5 2010-01-08   5526.72   5549.25  5494.79    5534.24  0.13606624  10770.35
+6 2010-01-12   5538.07   5549.61  5459.94    5498.71 -0.71071691  10795.48
+  N225.High N225.Low N225.Close   N225.Rtn Expected
+1  10791.04 10655.57   10681.83  0.2537829  5522.50
+2  10768.61 10661.17   10731.45  0.4645282  5530.04
+3  10774.00 10636.67   10681.66 -0.4639638  5526.72
+4  10816.45 10677.56   10798.32  1.0921538  5534.24
+5  10905.39 10763.68   10879.14  0.7484436  5498.71
+6  10866.62 10729.86   10735.03 -1.3246394  5473.48
+#+end_example
+
+Use the last 60 days to split into train and test.
+#+name: knnreg_split
+#+begin_src R :session *R* :exports both :results output
+fnReg.train <- head(fnReg, -60)
+fnReg.test <- tail(fnReg, 60)
+#+end_src
+
+#+RESULTS: knnreg_split
+
+Train the Knn model
+#+name: knnReg_train
+#+begin_src R :session *R* :exports both :results output :cache yes
+set.seed(1)
+fnReg.knn <- train(Expected ~ ., data = fnReg.train[, -1], method = "knn",
+trControl = trainControl(method = "repeatedcv", repeats = 3),
+tuneLength = 20)
+
+#+end_src
+
+#+RESULTS[f76712ccf8328059c37542c0ef50e487822cd328]: knnReg_train
+
+Look at the output
+
+#+name: knnReg_train_outpu
+#+begin_src R :session *R* :exports both :results output
+fnReg.knn
+#+end_src
+
+#+RESULTS: knnReg_train_outpu
+#+begin_example
+k-Nearest Neighbors 
+
+1368 samples
+  10 predictor
+
+No pre-processing
+Resampling: Cross-Validated (10 fold, repeated 3 times) 
+Summary of sample sizes: 1232, 1230, 1232, 1230, 1232, 1232, ... 
+Resampling results across tuning parameters:
+
+  k   RMSE       Rsquared   MAE     
+   5   73.61603  0.9825936  54.78380
+   7   74.55496  0.9821282  54.93982
+   9   75.12041  0.9818531  55.43268
+  11   76.70368  0.9810797  56.70036
+  13   78.11088  0.9804008  57.85823
+  15   79.93209  0.9794793  59.23617
+  17   81.77099  0.9785429  60.56469
+  19   83.73427  0.9775391  61.85544
+  21   85.98316  0.9763486  63.41677
+  23   87.89627  0.9753447  64.77395
+  25   90.02001  0.9741916  66.22398
+  27   92.19014  0.9729648  67.69200
+  29   94.22252  0.9718274  69.28711
+  31   96.53454  0.9704620  70.92569
+  33   98.81788  0.9690415  72.49483
+  35  101.12836  0.9675875  74.13887
+  37  103.20267  0.9662592  75.47065
+  39  105.37022  0.9648375  76.89376
+  41  107.34197  0.9635459  78.08032
+  43  109.58227  0.9620651  79.54460
+
+RMSE was used to select the optimal model using the smallest value.
+The final value used for the model was k = 5.
+#+end_example
+
+Plot results to see the fit [this plot isn't working]
+#+name: knn_reg_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/knn_reg_plot.png
+plot(fnReg.train$Expected, type="l", ylab = "FTSE Price")
+lines(predict(fnReg.knn, newdata = fnReg.train[, -1]), col="red")
+#legend("topleft", c("Training Data", "Prediction"), col = c("black", "red"), lty = c(1, 1))
+#+end_src
+
+#+RESULTS: knn_reg_plot
+[[file:./img/knn_reg_plot.png]]
+
+Use trained model to predict data
+#+name: knnReg_test
+#+begin_src R :session *R* :exports both :results output
+fnReg.predict <- predict(fnReg.knn, newdata = fnReg.test[, -1])
+#+end_src
+
+#+RESULTS: knnReg_test
+
+Use default summary to evaluate performance of KNN model.
+
+#+name: knnReg_test_eval
+#+begin_src R :session *R* :exports both :results output
+modelValues <- data.frame(obs = fnReg.test$Expected, pred = fnReg.predict)
+defaultSummary(modelValues)
+#+end_src
+
+#+RESULTS: knnReg_test_eval
+:       RMSE   Rsquared        MAE 
+: 208.074679   0.101324 184.461033
+
+Plot test data and prediction
+
+#+name: knnReg_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/knnReg_plot.png
+plot(fnReg.test$Expected, type = "l", ylim = c(4500, 7500), ylab = "FTSE Price")
+lines(fnReg.predict, col = "red")
+#legend("topright", c("Test Data", "Prediction"), col = c("black", "red"),
+#lty = c(1, 1))
+#+end_src
+
+#+RESULTS: knnReg_plot
+[[file:./img/knnReg_plot.png]]
+
+*** Random Forest Algorithm
+Ensemble weak learners to make a strong learner.
+
+1. Take a random sample of size /N/ with replacement from the data (bootstrap sample).
+2. Take a random sample without replacements of the predictors.
+3. Construct a split by using predictors selected in Step 2.
+4. Repeat Steps 2 and 3 for each subsequent split until the tree is as large as desired.
+5. Drop the out-of-bag data down the tree.  Store the class assigned to each observation along with each observation's predictor value.
+6. Repeat Steps 1-5 a large number of time (e.g., 1000).
+7. For each observation in the dataset, count the number of trees that it is classified in one category over the number of trees.
+8. Assign each obsevation to a final category by a majority vote over the set of trees.
+
+Bootstrapping decreases variance without increasing bias. 
+Optimal number of trees can be found using cross-validation.
+
+*** Random Forest for Classification
+
+Divide into test and train
+#+name: rf_split
+#+begin_src R :session *R* :exports both :results output
+fn.train <- with(fn, fn[Date <= "2014-12-31",])
+fn.test <- with(fn, fn[Date >= "2015-01-01",])
+#+end_src
+
+#+RESULTS: rf_split
+
+Train using random forest
+
+#+name: rf_train 
+#+begin_src R :session *R* :exports both :results output :cache yes
+set.seed(1)
+fn.rf <- train(Direction ~ ., data = fn.train[,-1], method = "rf",
+trControl = trainControl(method = "repeatedcv", repeats = 3),
+preProcess = c("center","scale"), tuneLength = 50)
+fn.rf
+#+end_src
+
+#+RESULTS[36609a944ac9938083af831c109581f35f38bd32]: rf_train
+#+begin_example
+note: only 9 unique complexity parameters in default grid. Truncating the grid to 9 .
+Random Forest 
+
+1192 samples
+  10 predictor
+   2 classes: 'DOWN', 'UP' 
+
+Pre-processing: centered (10), scaled (10) 
+Resampling: Cross-Validated (10 fold, repeated 3 times) 
+Summary of sample sizes: 1073, 1072, 1072, 1073, 1073, 1073, ... 
+Resampling results across tuning parameters:
+
+  mtry  Accuracy   Kappa    
+   2    0.5654930  0.1254466
+   3    0.5680329  0.1306635
+   4    0.5716605  0.1381195
+   5    0.5713921  0.1378262
+   6    0.5736309  0.1421767
+   7    0.5744499  0.1432106
+   8    0.5800572  0.1552218
+   9    0.5783766  0.1515717
+  10    0.5802974  0.1556348
+
+Accuracy was used to select the optimal model using the largest value.
+The final value used for the model was mtry = 10.
+#+end_example
+
+
+Plot accuracy y
+#+name: fnrf_acc
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/fnrf_acc.png
+plot(fn.rf)
+#+end_src
+
+#+RESULTS: fnrf_acc
+[[file:./img/fnrf_acc.png]]
+
+Predict the test set
+#+name: rf_test
+#+begin_src R :session *R* :exports both :results output
+fn.rf.predict <- predict(fn.rf, newdata = fn.test[,-1])
+confusionMatrix(fn.rf.predict,as.factor(fn.test$Direction))
+#+end_src
+
+#+RESULTS: rf_test
+#+begin_example
+Confusion Matrix and Statistics
+
+          Reference
+Prediction DOWN UP
+      DOWN   78 65
+      UP     38 56
+                                          
+               Accuracy : 0.5654          
+                 95% CI : (0.4997, 0.6294)
+    No Information Rate : 0.5105          
+    P-Value
+NIR] : 0.05198         
+                                          
+                  Kappa : 0.1346          
+                                          
+ Mcnemar's Test P-Value : 0.01041         
+                                          
+            Sensitivity : 0.6724          
+            Specificity : 0.4628          
+         Pos Pred Value : 0.5455          
+         Neg Pred Value : 0.5957          
+             Prevalence : 0.4895          
+         Detection Rate : 0.3291          
+   Detection Prevalence : 0.6034          
+      Balanced Accuracy : 0.5676          
+                                          
+       'Positive' Class : DOWN
+#+end_example
+
+*** Random Forest for Regression
+
+Train on continuous variables
+#+name: rfReg_train
+#+begin_src R :session *R* :exports both :results output :cache yes
+set.seed(1)
+fnReg.rf <- train(Expected ~ ., data = fnReg.train[, -1], method = "rf",
+trControl = trainControl(method = "repeatedcv", repeats = 3),
+tuneLength = 20)
+
+#+end_src
+
+Preview results
+
+#+name: rfReg_train_output
+#+begin_src R :session *R* :exports both :results output
+fnReg.rf
+
+#+end_src
+
+Predict random forest regression
+#+name: rfReg_test
+#+begin_src R :session *R* :exports both :results output
+fnReg.predict <- predict(fnReg.rf, newdata = fnReg.test[, -1])
+modelValues <- data.frame(obs = fnReg.test$Expected, pred = fnReg.predict)
+defaultSummary(modelValues)
+
+#+end_src
+
+Plot results 
+
+#+name: refreg_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/rfreg_plot.png
+plot(fnReg.test$Expected, type = "l", ylim = c(4500, 7500), ylab = "FTSE Price")
+lines(fnReg.predict, col = "red")
+legend("topright", c("Test Data", "Prediction"), col = c("black", "red"),
+lty = c(1, 1))
+
+#+end_src
+
+#+RESULTS: refreg_plot
+[[file:./img/rfreg_plot.png]]
+
+** Support Vector Machine
+Finds the hypoerplan that gives the largest minimum distance to the data points in the training data set.
+This distance is called margin.
+Therefore, SVM maximizes margin.
+SVM also works for nonlinear classification.
+
+The large-margin separations means that only the relative position or similarlity of the data points to each other is important.
+Similarity can be computered using a kernel function.
+The simplest kernel function is the dot-product between two feature vectors (linear kernel).
+Polynomial and Gaussian kernels are also possible, and these are nonlinear.
+
+The loss function in SVM should be modified to include a distance measure, which is often called epsilon intensive loss function.
+This epsilon intensive loss functions ensures existence of a global minimum.
+
+There are two steps.
+First, transform input data to high-dimensional feature space by specifying a kernel function.
+The step is to solve a quadratic optimization problem to fit optimal hypoterplane to classify transformed features into different classes.
+The number of transformed features is determined by the number of support vectors.
+
+*** SVM for Classification
+
+Predict next day's stock movement.
+
+#+name: svm_train_test
+#+begin_src R :session *R* :exports both :results output
+ctrl <- trainControl(method = "repeatedcv", repeats = 10)
+fn.svm <- train(Direction ~ ., data = fn.train[,-1], method = "svmLinear",
+trControl = ctrl, preProcess = c("center","scale"))
+fn.svm
+fn.svm.predict <- predict(fn.svm, newdata = fn.test[,-1])
+confusionMatrix(fn.svm.predict,as.factor(fn.test$Direction))
+#+end_src
+
+#+RESULTS: svm_train_test
+#+begin_example
+Support Vector Machines with Linear Kernel 
+
+1192 samples
+  10 predictor
+   2 classes: 'DOWN', 'UP' 
+
+Pre-processing: centered (10), scaled (10) 
+Resampling: Cross-Validated (10 fold, repeated 10 times) 
+Summary of sample sizes: 1072, 1072, 1073, 1073, 1073, 1073, ... 
+Resampling results:
+
+  Accuracy   Kappa    
+  0.5995895  0.1927101
+
+Tuning parameter 'C' was held constant at a value of 1
+Confusion Matrix and Statistics
+
+          Reference
+Prediction DOWN  UP
+      DOWN   34  16
+      UP     82 105
+                                          
+               Accuracy : 0.5865          
+                 95% CI : (0.5209, 0.6499)
+    No Information Rate : 0.5105          
+    P-Value
+NIR] : 0.01132         
+                                          
+                  Kappa : 0.1628          
+                                          
+ Mcnemar's Test P-Value : 5.169e-11       
+                                          
+            Sensitivity : 0.2931          
+            Specificity : 0.8678          
+         Pos Pred Value : 0.6800          
+         Neg Pred Value : 0.5615          
+             Prevalence : 0.4895          
+         Detection Rate : 0.1435          
+   Detection Prevalence : 0.2110          
+      Balanced Accuracy : 0.5804          
+                                          
+       'Positive' Class : DOWN
+#+end_example
+
+*** SVM for Regression
+
+
+Train, view results, predict test
+#+name: svmReg_train_test
+#+begin_src R :session *R* :exports both :results output
+set.seed(1234)
+fnReg.svm <- train(Expected ~ ., data = fnReg.train[, -1], method = "svmLinear",
+trControl = trainControl(method = "repeatedcv", repeats = 3))
+fnReg.svm
+fnReg.predict <- predict(fnReg.svm, newdata = fnReg.test[, -1])
+modelValues <- data.frame(obs = fnReg.test$Expected, pred = fnReg.predict)
+defaultSummary(modelValues)
+#+end_src
+
+#+RESULTS: svmReg_train_test
+#+begin_example
+Support Vector Machines with Linear Kernel 
+
+1368 samples
+  10 predictor
+
+No pre-processing
+Resampling: Cross-Validated (10 fold, repeated 3 times) 
+Summary of sample sizes: 1232, 1230, 1230, 1232, 1230, 1232, ... 
+Resampling results:
+
+  RMSE      Rsquared   MAE     
+  57.15723  0.9895976  42.67837
+
+Tuning parameter 'C' was held constant at a value of 1
+      RMSE   Rsquared        MAE 
+64.1340012  0.8099375 49.8210808
+#+end_example
+
+Plot results
+
+#+name: svmReg_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/svmReg_plot.png
+plot(fnReg.test$Expected, type = "l", ylim = c(4500, 7500), ylab = "FTSE Price")
+lines(fnReg.predict, col = "red")
+#legend("topright", c("Test Data", "Prediction"), col = c("black", "red"),
+#lty = c(1, 1))
+#+end_src
+
+#+RESULTS: svmReg_plot
+[[file:./img/svmReg_plot.png]]
+
+** Artificial Neural Networks (ANNs)
+This book suggests that multilayer feedforward ANNs are best for predicting stock price movemement (no connections backward).
+
+*** Neural Networks for Classification
+
+First we will examine the data to see if we should normalize our features (the answer is always yes)
+
+#+name: strfn
+#+begin_src R :session *R* :exports both :results output
+str(fn)
+#+end_src
+
+#+RESULTS: strfn
+#+begin_example
+'data.frame':	1429 obs. of  12 variables:
+ $ Date      : Date, format: "2010-01-04" "2010-01-05" ...
+ $ FTSE.Open : num  5413 5500 5522 5530 5527 ...
+ $ FTSE.High : num  5500 5536 5536 5552 5549 ...
+ $ FTSE.Low  : num  5411 5481 5498 5500 5495 ...
+ $ FTSE.Close: num  5500 5522 5530 5527 5534 ...
+ $ FTSE.Rtn  : num  0 0.403 0.137 -0.06 0.136 ...
+ $ N225.Open : num  10719 10710 10743 10743 10770 ...
+ $ N225.High : num  10791 10769 10774 10816 10905 ...
+ $ N225.Low  : num  10656 10661 10637 10678 10764 ...
+ $ N225.Close: num  10682 10731 10682 10798 10879 ...
+ $ N225.Rtn  : num  0.254 0.465 -0.464 1.092 0.748 ...
+ $ Direction : chr  "UP" "UP" "DOWN" "UP" ...
+#+end_example
+
+Now we will create a function to normalize the data to the range.
+
+#+name: normalize
+#+begin_src R :session *R* :exports both :results output
+normalizeData <- function(x) {
+    return((x-min(x)) / (max(x)-min(x)))
+  }
+fnx <- fn
+fnx$Date <- fnx$Direction <- NULL
+fnx <- as.data.frame(lapply(fnx, normalizeData))
+head(fnx)
+
+#+end_src
+
+#+RESULTS: normalize
+#+begin_example
+  FTSE.Open FTSE.High  FTSE.Low FTSE.Close  FTSE.Rtn N225.Open N225.High
+1 0.2641729 0.2819301 0.2736763  0.3022282 0.4748689 0.2019377 0.2031963
+2 0.3022282 0.2978813 0.3044879  0.3118704 0.5158622 0.2011639 0.2014375
+3 0.3118704 0.2979255 0.3119561  0.3151512 0.4887610 0.2037613 0.2018601
+4 0.3151512 0.3046442 0.3129039  0.3137066 0.4687603 0.2038043 0.2051887
+5 0.3137066 0.3035775 0.3106952  0.3169787 0.4887136 0.2059205 0.2121627
+6 0.3186452 0.3037368 0.2953313  0.3015190 0.4025538 0.2078865 0.2091227
+   N225.Low N225.Close  N225.Rtn
+1 0.1983699  0.1984432 0.5917886
+2 0.1988108  0.2023478 0.6033282
+3 0.1968820  0.1984298 0.5524876
+4 0.2001010  0.2076099 0.6376946
+5 0.2068808  0.2139696 0.6188743
+6 0.2042184  0.2026296 0.5053603
+#+end_example
+
+Split data into test and train
+
+#+name: xy_traintest
+#+begin_src R :session *R* :exports both :results output
+x.train <- head(fnx, -241)
+x.test <- tail(fnx, 241)
+y.train <- as.data.frame(head(fn,-241))$Direction
+y.test <- as.data.frame(tail(fn,241))$Direction
+#+end_src
+
+#+RESULTS: xy_traintest
+
+Train ANN
+
+#+name: ann_train
+#+begin_src R :session *R* :exports both :results output :cache yes
+set.seed(1234)
+ctrl <- trainControl(method = "repeatedcv", repeats = 5, number = 5)
+fn.nn <- train(x = x.train, y = y.train, method = "nnet",
+trControl = ctrl, tuneLength = 10, trace = FALSE)
+fn.nn
+#+end_src
+
+#+RESULTS: ann_train
+#+begin_example
+Neural Network 
+
+1188 samples
+  10 predictor
+   2 classes: 'DOWN', 'UP' 
+
+No pre-processing
+Resampling: Cross-Validated (5 fold, repeated 5 times) 
+Summary of sample sizes: 950, 951, 950, 951, 950, 950, ... 
+Resampling results across tuning parameters:
+
+  size  decay         Accuracy   Kappa    
+   1    0.0000000000  0.5947506  0.1773183
+   1    0.0001000000  0.5840008  0.1489377
+   1    0.0002371374  0.5767667  0.1340513
+   1    0.0005623413  0.5645033  0.1063615
+   1    0.0013335214  0.5924027  0.1721731
+   1    0.0031622777  0.5851829  0.1546109
+   1    0.0074989421  0.5967823  0.1837368
+   1    0.0177827941  0.5961072  0.1849955
+   1    0.0421696503  0.6011656  0.1949709
+   1    0.1000000000  0.6020123  0.1966378
+   3    0.0000000000  0.5994884  0.1909870
+   3    0.0001000000  0.5994841  0.1898289
+   3    0.0002371374  0.6026696  0.1972467
+   3    0.0005623413  0.6023385  0.1968234
+   3    0.0013335214  0.6014989  0.1952293
+   3    0.0031622777  0.5930657  0.1797088
+   3    0.0074989421  0.6094037  0.2115621
+   3    0.0177827941  0.6053659  0.2038492
+   3    0.0421696503  0.6063616  0.2069790
+   3    0.1000000000  0.6062154  0.2053208
+   5    0.0000000000  0.5954286  0.1824067
+   5    0.0001000000  0.5999954  0.1920286
+   5    0.0002371374  0.5929118  0.1784488
+   5    0.0005623413  0.5942436  0.1811213
+   5    0.0013335214  0.5976199  0.1879154
+   5    0.0031622777  0.5998076  0.1921799
+   5    0.0074989421  0.6023336  0.1972625
+   5    0.0177827941  0.6058581  0.2043481
+   5    0.0421696503  0.6107497  0.2151394
+   5    0.1000000000  0.6053736  0.2041157
+   7    0.0000000000  0.5792771  0.1534069
+   7    0.0001000000  0.5868479  0.1674675
+   7    0.0002371374  0.5922169  0.1779055
+   7    0.0005623413  0.5866473  0.1664921
+   7    0.0013335214  0.5971093  0.1870028
+   7    0.0031622777  0.5908964  0.1745331
+   7    0.0074989421  0.6055304  0.2042054
+   7    0.0177827941  0.6092053  0.2115698
+   7    0.0421696503  0.6082266  0.2104728
+   7    0.1000000000  0.6040298  0.2010179
+   9    0.0000000000  0.5871833  0.1693874
+   9    0.0001000000  0.5875258  0.1681067
+   9    0.0002371374  0.5844843  0.1632334
+   9    0.0005623413  0.5822853  0.1579851
+   9    0.0013335214  0.5827973  0.1586526
+   9    0.0031622777  0.5873324  0.1679448
+   9    0.0074989421  0.5901888  0.1732924
+   9    0.0177827941  0.6043405  0.2013014
+   9    0.0421696503  0.6122553  0.2182269
+   9    0.1000000000  0.6035178  0.1999213
+  11    0.0000000000  0.5794367  0.1522612
+  11    0.0001000000  0.5853317  0.1644861
+  11    0.0002371374  0.5836454  0.1624478
+  11    0.0005623413  0.5865146  0.1678897
+  11    0.0013335214  0.5861693  0.1656024
+  11    0.0031622777  0.5908936  0.1747307
+  11    0.0074989421  0.5950925  0.1833357
+  11    0.0177827941  0.6043313  0.2016203
+  11    0.0421696503  0.6105817  0.2149566
+  11    0.1000000000  0.6031817  0.1992942
+  13    0.0000000000  0.5888767  0.1714118
+  13    0.0001000000  0.5843403  0.1620815
+  13    0.0002371374  0.5864998  0.1665880
+  13    0.0005623413  0.5829696  0.1591928
+  13    0.0013335214  0.5821321  0.1582996
+  13    0.0031622777  0.5930608  0.1796795
+  13    0.0074989421  0.5935700  0.1802362
+  13    0.0177827941  0.6021641  0.1968581
+  13    0.0421696503  0.6107476  0.2154965
+  13    0.1000000000  0.6046957  0.2025467
+  15    0.0000000000  0.5818080  0.1560407
+  15    0.0001000000  0.5770560  0.1491584
+  15    0.0002371374  0.5763951  0.1467020
+  15    0.0005623413  0.5826101  0.1593395
+  15    0.0013335214  0.5900391  0.1734328
+  15    0.0031622777  0.5851608  0.1633889
+  15    0.0074989421  0.5944159  0.1818350
+  15    0.0177827941  0.6039994  0.2004030
+  15    0.0421696503  0.6100704  0.2141646
+  15    0.1000000000  0.6043560  0.2020346
+  17    0.0000000000  0.5801111  0.1553176
+  17    0.0001000000  0.5748789  0.1434048
+  17    0.0002371374  0.5740541  0.1426087
+  17    0.0005623413  0.5815868  0.1578588
+  17    0.0013335214  0.5794387  0.1531597
+  17    0.0031622777  0.5823235  0.1579740
+  17    0.0074989421  0.5878351  0.1688083
+  17    0.0177827941  0.6041753  0.2011916
+  17    0.0421696503  0.6100767  0.2140261
+  17    0.1000000000  0.6058707  0.2049583
+  19    0.0000000000  0.5769198  0.1483938
+  19    0.0001000000  0.5818002  0.1581756
+  19    0.0002371374  0.5797791  0.1543552
+  19    0.0005623413  0.5785913  0.1513950
+  19    0.0013335214  0.5804387  0.1545173
+  19    0.0031622777  0.5854843  0.1644059
+  19    0.0074989421  0.5934054  0.1799900
+  19    0.0177827941  0.6023216  0.1973172
+  19    0.0421696503  0.6105739  0.2151288
+  19    0.1000000000  0.6033462  0.2000386
+
+Accuracy was used to select the optimal model using the largest value.
+The final values used for the model were size = 9 and decay = 0.04216965.
+#+end_example
+
+
+Visualize ANN [this doesn't work :(]
+
+#+name: ann_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/ann_plot.png
+
+library(caret)
+source_url('https://gist.githubusercontent.com/fawda123/7471137/raw/466c1474d0a505ff044412703516c34f1a4684a5/nnet_plot_update.r')
+plot.nnet(fn.nn)
+
+#+end_src
+
+#+RESULTS: ann_plot
+[[file:./img/ann_plot.png]]
+
+Predict test data
+
+#+name: ann_test
+#+begin_src R :session *R* :exports both :results output
+fn.nn.predict <- predict(fn.nn, newdata = x.test)
+confusionMatrix(fn.nn.predict,as.factor(y.test))
+#+end_src
+
+#+RESULTS: ann_test
+#+begin_example
+Confusion Matrix and Statistics
+
+          Reference
+Prediction DOWN UP
+      DOWN   95 72
+      UP     23 51
+                                         
+               Accuracy : 0.6058         
+                 95% CI : (0.541, 0.6679)
+    No Information Rate : 0.5104         
+    P-Value
+NIR] : 0.001806       
+                                         
+                  Kappa : 0.2179         
+                                         
+ Mcnemar's Test P-Value : 8.449e-07      
+                                         
+            Sensitivity : 0.8051         
+            Specificity : 0.4146         
+         Pos Pred Value : 0.5689         
+         Neg Pred Value : 0.6892         
+             Prevalence : 0.4896         
+         Detection Rate : 0.3942         
+   Detection Prevalence : 0.6929         
+      Balanced Accuracy : 0.6099         
+                                         
+       'Positive' Class : DOWN
+#+end_example
+
+*** ANN for Regression
+
+Pre-process data to use fnx classification problem dataset
+split into test and train
+
+#+name: preprocess
+#+begin_src R :session *R* :exports both :results output
+xy <- fnx
+xy$Expected <- lead(xy$FTSE.Close)
+xy<- xy[-nrow(xy),]
+xy.train <- head(xy, -60)
+xy.test <- tail(xy, 60)
+
+#+end_src
+
+#+RESULTS: preprocess
+
+Train on training set
+
+#+name: annReg_train
+#+begin_src R :session *R* :exports both :results output :cache yes
+set.seed(12345)
+ctrl <- trainControl(method = "repeatedcv", repeats = 3, number = 5)
+fnReg.nn <- train(Expected ~ ., data = xy.train, method = "nnet",
+trControl = ctrl, tuneLength = 5, trace = FALSE)
+fnReg.nn
+
+#+end_src
+
+#+RESULTS[73939b67ba3a7719778132758245abbec28e736b]: annReg_train
+#+begin_example
+Neural Network 
+
+1368 samples
+  10 predictor
+
+No pre-processing
+Resampling: Cross-Validated (5 fold, repeated 3 times) 
+Summary of sample sizes: 1094, 1094, 1094, 1095, 1095, 1093, ... 
+Resampling results across tuning parameters:
+
+  size  decay  RMSE        Rsquared   MAE       
+  1     0e+00  0.03001576  0.9847348  0.02276178
+  1     1e-04  0.03013584  0.9846119  0.02285315
+  1     1e-03  0.03095296  0.9838156  0.02354345
+  1     1e-02  0.03367255  0.9811078  0.02573516
+  1     1e-01  0.04162665  0.9742108  0.03090446
+  3     0e+00  0.02550131  0.9888659  0.01880705
+  3     1e-04  0.02576956  0.9886560  0.01926426
+  3     1e-03  0.02543368  0.9889975  0.01895336
+  3     1e-02  0.02957528  0.9853183  0.02244243
+  3     1e-01  0.03746831  0.9782222  0.02789070
+  5     0e+00  0.02506330  0.9892662  0.01846131
+  5     1e-04  0.02523152  0.9891421  0.01871194
+  5     1e-03  0.02558013  0.9888594  0.01894277
+  5     1e-02  0.02928744  0.9855734  0.02225197
+  5     1e-01  0.03625234  0.9793464  0.02694509
+  7     0e+00  0.02513850  0.9892017  0.01852413
+  7     1e-04  0.02512707  0.9892271  0.01853013
+  7     1e-03  0.02551769  0.9889172  0.01898627
+  7     1e-02  0.02924782  0.9856128  0.02224497
+  7     1e-01  0.03586885  0.9796820  0.02663118
+  9     0e+00  0.02511433  0.9892187  0.01848913
+  9     1e-04  0.02511768  0.9892296  0.01855158
+  9     1e-03  0.02551788  0.9889041  0.01895170
+  9     1e-02  0.02916250  0.9856959  0.02218335
+  9     1e-01  0.03543371  0.9801297  0.02631143
+
+RMSE was used to select the optimal model using the smallest value.
+The final values used for the model were size = 5 and decay = 0.
+#+end_example
+
+Visualize [doesn't work]
+#+name: annReg_visualize
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/annReg_visualize.png
+plot.nnet(fnReg.nn)
+#+end_src
+
+#+RESULTS: annReg_visualize
+[[file:./img/annReg_visualize.png]]
+
+Predict test set
+
+#+name: annReg_test
+#+begin_src R :session *R* :exports both :results output
+fnReg.predict <- predict(fnReg.nn, newdata = xy.test)
+modelValues <- data.frame(obs = xy.test$Expected, pred = fnReg.predict)
+defaultSummary(modelValues)
+
+#+end_src
+
+#+RESULTS: annReg_test
+:       RMSE   Rsquared        MAE 
+: 0.02834989 0.83039113 0.02179863
+
+Plot (normalized)
+
+#+name: annReg_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/annreg_plot.png
+plot(xy.test$Expected, type = "l", ylim = c(0, 1), ylab = "Normalized FTSE Price")
+lines(fnReg.predict, col = "red")
+legend("topright", c("Test Data", "Prediction"), col = c("black", "red"),
+lty = c(1, 1))
+
+#+end_src
+
+#+RESULTS: annReg_plot
+[[file:./img/annreg_plot.png]]
+
+Plot (original values)
+
+#+name: annReg_orig
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/annreg_orig.png
+FTSE.min <- min(fn$FTSE.Close)
+FTSE.max <- max(fn$FTSE.Close)
+expected <- FTSE.min + xy.test$Expected*(FTSE.max - FTSE.min)
+predicted <- FTSE.min + fnReg.predict*(FTSE.max - FTSE.min)
+plot(expected, type = "l", ylim = c(4500, 7500), ylab = "FTSE Price")
+lines(predicted, col = "red")
+#legend("topright", c("Expected", "Predicted"), col = c("black", "red"),
+#lty = c(1, 1))
+
+#+end_src
+
+#+RESULTS: annReg_orig
+[[file:./img/annreg_orig.png]]
+
+Calculate RMSE and R-squared for predicted price for original data
+
+#+name: annReg_RMSE
+#+begin_src R :session *R* :exports both :results output
+modelValues <- data.frame(obs = expected, pred = predicted)
+defaultSummary(modelValues)
+
+#+end_src
+
+#+RESULTS: annReg_RMSE
+:       RMSE   Rsquared        MAE 
+: 65.1545675  0.8303911 50.0982729
+
+* Trading Strategies and Backtesting
+** Trading Strategy Identification
+A mean-reverting strategy exploits the fact that price returns to its long-term average price after a temporary deviation: buy low and sell high
+Momentum starategies based on strong moves int he market, where more direction follows direction: higher highs and lower lows
+Trend-trading stratggies buy stocks on upward trend and sell on downward trend.
+
+To illustrate:
+
+#+name: tradingstrats
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/tradingstrats.png
+library(quantmod)
+getSymbols("IBM", from = "2012-01-01", to = "2013-08-01")
+chartSeries(IBM, theme = "white") #, minor.ticks = F)
+addTA(SMA(Cl(IBM), n = 40), on = 1, col = "blue")
+#+end_src
+
+#+RESULTS: tradingstrats
+[[file:./img/tradingstrats.png]]
+
+Another example using GS
+
+#+name: gs
+#+begin_src R :session *R* :exports both :results output graphics file :file gs.png
+getSymbols("GS", from = "2011-01-01", to = "2015-07-31")
+gs <- GS["2012-07-31::2015-07-31"]
+chartSeries(gs, theme = "white")#, minor.ticks = F)
+addTA(SMA(Cl(GS), n = 200), on = 1, col = "blue")
+#+end_src
+
+#+RESULTS: gs
+[[file:gs.png]]
+
+** Trading Signals
+*** Signals from moving average
+When the price deviates more than SignalIn standard deviations from mean, we enter position.
+SignalIn is a free parameter that can be optimized during training.
+The length of the moving window (for mean and standard deviation) can also be optimized.
+We exit positions when price returns to SignalOut standard deviations from the mean.
+SignalOut is usually set to 0 (the mean).
+When moving window is short, SignalIn and SignalOut will be small, and we will have shorter holding periods and thus more trades.
+
+Bollinger bands IBM
+
+#+name: IBM_bollinger
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/IBM_bollinger.png
+chartSeries(IBM, theme = "white", yrange = c(170, 230),
+TA = "addBBands(n = 40, maType = 'SMA')")
+#+end_src
+
+#+RESULTS: IBM_bollinger
+[[file:./img/IBM_bollinger.png]]
+
+Strategy Helper file
+
+#+name: strategyhelper
+#+begin_src R :session *R* :exports none :results none
+source("./R/strategyHelper.R")
+#+end_src
+
+Calculate moving average z-scores using strategyHelper maZscore function
+
+#+name: maZscore
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/mazscore.png
+zscore <- maZscore(Cl(IBM), 40)
+plot(zscore)
+#+end_src
+
+#+RESULTS: maZscore
+[[file:./img/mazscore.png]]
+*** Signals from Linear Regression
+
+This is price - pred.price / stdev
+This is also a rolling signal.
+
+[error: invalid 'y' type in 'x & & y']
+
+#+name: lrzscore
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/lrzscore.png
+source("./R/strategyHelper.R")
+zscore <- lrZscore(as.numeric(Cl(IBM)), as.numeric(40))
+plot(zscore$Zscore, main = "Linear regression Zscore for IBM")
+plot(Cl(IBM))
+lines(zscore$FittedValues, col="red")
+#+end_src
+
+#+RESULTS: lrzscore
+[[file:./img/lrzscore.png]]
+
+*** Signals from RSI
+Relative Strength Index (RSI) Is a momentum oscillator that measures spped and change of price movement, 0 to 100.
+Considered overbought when > 70 and oversold when below 30.
+The RSI formulas = 100 - 100 / (1 + RS'), where RS = Average Gain / Average Loss
+Losses are expressed as positive values.
+To extract trading signal, re-normalize so it's bettwenn -2 and 2
+Signal = RSI - 50 / 25
+
+Apply RSI signal
+
+#+name: rsisignal
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/rsisignal.png
+sig <- rsiSignal(Cl(IBM), 14)
+plot(sig)
+#+end_src
+
+#+RESULTS: rsisignal
+[[file:./img/rsisignal.png]]
+
+*** Signal from Williams %R
+Williams %R is a momentum indicator that show the level of hte close price relative to the ihghest high for a given moving window.
+It oscillates from -100 to 0.
+Readings from 0 to -20 are overbough, while reading from -80 to -100 are considered oversold.
+The formula is
+WilliamsR = -100 * (highest high - Close) / (highest high - lowest low)
+Trading signal after renormalize to be between -2 and 2:
+Signal = WilliamsR/25+2 = -4 * (highest high - Close) / (highest high - lowest low) + 2
+
+Applying Williams %R (moving window of 14)
+
+
+#+name: williamsR
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/williamsR.png
+wpr <- wprSignal(IBM[, c("IBM.High", "IBM.Low", "IBM.Close")], 14)
+plot(wpr)
+#+end_src
+
+#+RESULTS: williamsR
+[[file:./img/williamsR.png]]
+
+** Backtest System Implementation
+Use trading signal to test strategies on historical data.
+Can calculate daily and accumulated profit and loss and other risk measures for a given trading strategy.
+Assumptions here: no stop-loss, ignore transaction costs, ignore bid/ask spreads, and assumme ordered can be filled fully at specified close price.
+We have to use the popular TWAP and or VWAP to execute our orders.
+
+*** Profit and Loss Computation
+The first long-short trading strategy is located in strategyHelper.R
+This strategies takes as its input price, zin, and zout.
+It takes a long position (+1) when zscore is less than -zin and flat the position when zscore is greater than -zout.
+It takes a short position (-1) when zscore is greater than zin and flat the position when zscore < zout.
+It exits either position when zout = 0.
+The first day is flat (0) and the last day is flat (0).
+This function also replaces each na with the previous non-na value.
+
+There are columns for Long position and columns for Shrot position.
+
+The position is calculated as the lag of the sum of Long and Short positions.  This lag is important to avoid look-forward bias.
+
+This also calculates Equity, REturn, ReturnDaily, Return Hold, and Return Daily Hold.
+
+Test the longshort Trading strategy based on moving average
+
+#+name: longshort_ma
+#+begin_src R :session *R* :exports both :results output 
+source("./R/strategyHelper.R")
+zscore <- maZscore(Cl(IBM), 40)
+price <- na.omit(data.frame(Price = Cl(IBM), Zscore <- zscore[,1]))
+strategy <- longShortStrategy(price, 2, 0)
+tail(strategy)
+
+#+end_src
+
+#+RESULTS: longshort_ma
+: Error in diff(strategy$Position, na.pad = FALSE) : 
+:   object 'strategy' not found
+: Error in tail(strategy) : object 'strategy' not found
+
+Plot cumulative returns
+
+#+name: longVshort_ma_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/longshort_ma_plot.png
+plot(strategy$Return, main = "Cumulative returns for IBM", ylim = c(-0.1, 0.27))
+lines(strategy$RetHold, col = "red")
+#+end_src
+
+#+RESULTS: longshort_ma_plot
+[[file:./img/longshort_ma_plot.png]]
+
+
+#+name: longshort_lr
+#+begin_src R :session *R* :exports both :results output 
+source("./R/strategyHelper.R")
+zscore <- lrZscore(Cl(IBM), 40)
+price <- na.omit(data.frame(Price = Cl(IBM), Zscore <- zscore[,1]))
+strategy <- longShortStrategy(price, 2, 0)
+tail(strategy)
+
+#+end_src
+
+#+RESULTS: longshort_lr
+#+begin_example
+Error in by.column && !is.null(dim(data)) : invalid 'x' type in 'x && y'
+            Price      Zscore PosLong PosShort Position   Equity    Return
+2013-07-24 196.61 -0.30800588       1        0        1 50.06001 0.2519283
+2013-07-25 197.22 -0.16334173       1        0        1 50.67001 0.2550261
+2013-07-26 197.35 -0.09181161       1        0        1 50.80002 0.2556851
+2013-07-29 196.21 -0.26315330       1        0        1 49.66002 0.2498918
+2013-07-30 196.01 -0.25625811       1        0        1 49.46000 0.2488719
+2013-07-31 195.04 -0.42220256       0        0        1 48.49000 0.2439109
+             ReturnDaily       RetHold  RetDailyHold numTrades Pnl.oneShare
+2013-07-24  0.0083251075 -0.0006101338  0.0083251075        15        48.49
+2013-07-25  0.0030977858  0.0024876520  0.0030977858        15        48.49
+2013-07-26  0.0006589705  0.0031466226  0.0006589705        15        48.49
+2013-07-29 -0.0057932826 -0.0026466600 -0.0057932826        15        48.49
+2013-07-30 -0.0010198971 -0.0036665571 -0.0010198971        15        48.49
+2013-07-31 -0.0049610230 -0.0086275801 -0.0049610230        15        48.49
+                rtn
+2013-07-24 24.39109
+2013-07-25 24.39109
+2013-07-26 24.39109
+2013-07-29 24.39109
+2013-07-30 24.39109
+2013-07-31 24.39109
+#+end_example
+
+
+#+name: longshort_lr_plot
+#+begin_src R :session *R* :exports both :results output graphics file :file ./img/longshort_lr_plot.png
+plot(strategy$Return, main = "Cumulative returns for IBM", ylim = c(-0.1, 0.27))
+lines(strategy$RetHold, col = "red")
+#+end_src
+
+#+RESULTS: longshort_lr_plot
+[[file:./img/longshort_lr_plot.png]]
+
+calculate other metrics if interested
+#+name: othermetrics
+#+begin_src R :session *R* :exports both :results output
+numTrades <- sum(abs(diff(strategy$Position, na.pad = FALSE)))
+numtrades
+Pnl.oneShare <- sum(diff(strategy$Price) * strategy$Position, na.rm = TRUE)
+Pnl.oneShare #P&L for one share of investment
+rtn <- 100 * sum(ROC(strategy$Price) * strategy$Position, na.rm=TRUE)
+rtn #Percentage return of fully invested account
+#+end_src
+ 
+#+RESULTS: othermetrics
+: Error: object 'numtrades' not found
+: [1] 48.49
+: [1] 24.39109
+
+*** Risk Measures
