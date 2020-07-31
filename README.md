@@ -6,7 +6,7 @@ My name is Caleb J. Picker.  I aim to develop my experience and expertise in dat
 
 **Projects**
 
-My first project is an automated stock trading program. I am following Dr. Xu's ["Practice Quantitative Finance Using R"](https://www.drxudotnet.com/rquant.php).
+My first project is an [automated stock trading program](./stock/Automated\ Stock\ Trading.org). I am following Dr. Xu's ["Practical Quantitative Finance Using R"](https://www.drxudotnet.com/rquant.php).
 
 Check back here to view my progress.  I will post projects as I work on them.
 
